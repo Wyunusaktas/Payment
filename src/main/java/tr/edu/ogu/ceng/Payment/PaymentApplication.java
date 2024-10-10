@@ -2,7 +2,6 @@ package tr.edu.ogu.ceng.Payment;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
 @SpringBootApplication
 public class PaymentApplication {
 
