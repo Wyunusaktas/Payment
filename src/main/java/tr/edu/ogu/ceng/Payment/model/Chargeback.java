@@ -1,0 +1,44 @@
+package tr.edu.ogu.ceng.Payment.model;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Entity
+@Table(name = "chargebacks")
+@NoArgsConstructor
+@Data
+public class Chargeback {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name = "chargeback_id")
+    private UUID chargebackId;
+
+    @ManyToOne
+    @JoinColumn(name = "payment_id", referencedColumnName = "payment_id")
+    private Payment payment;
+
+    @Column(name = "user_id", nullable = false)
+    private UUID userId;
+
+    @Column(name = "chargeback_amount", nullable = false, precision = 10, scale = 2)
+    private BigDecimal chargebackAmount;
+
+    @Column(nullable = false, length = 255)
+    private String reason;
+
+    @Column(name = "filed_at", nullable = false)
+    private LocalDateTime filedAt;
+
+    @Column(length = 50, nullable = false)
+    private String status;
+
+    @Column(name = "resolved_at")
+    private LocalDateTime resolvedAt;
+}
+
