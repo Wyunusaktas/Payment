@@ -14,9 +14,9 @@ import java.util.UUID;
 public class ErrorLog {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "error_id")
-    private UUID errorId;
+    private Long errorId;  // UUID yerine Long
 
     @Column(name = "error_message", nullable = false, length = 255)
     private String errorMessage;

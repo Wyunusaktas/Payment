@@ -15,9 +15,9 @@ import java.util.UUID;
 public class PaymentAnalytics {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "analytics_id")
-    private UUID analyticsId;
+    private Long analyticsId;  // UUID yerine Long
 
     @Column(name = "total_payments", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalPayments;

@@ -15,9 +15,9 @@ import java.util.UUID;
 public class AuditLog {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "log_id")
-    private UUID logId;
+    private Long logId;  // UUID yerine Long
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;

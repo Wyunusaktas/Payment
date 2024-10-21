@@ -15,9 +15,9 @@ import java.util.UUID;
 public class Discount {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "discount_id")
-    private UUID discountId;
+    private Long discountId;  // UUID yerine Long
 
     @Column(unique = true, length = 50, nullable = false)
     private String code;

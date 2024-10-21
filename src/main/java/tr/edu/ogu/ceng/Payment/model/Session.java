@@ -14,9 +14,9 @@ import java.util.UUID;
 public class Session {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "session_id")
-    private UUID sessionId;
+    private Long sessionId;  // UUID yerine Long
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;

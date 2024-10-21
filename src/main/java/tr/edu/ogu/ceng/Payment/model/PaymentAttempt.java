@@ -15,9 +15,9 @@ import java.util.UUID;
 public class PaymentAttempt {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "attempt_id")
-    private UUID attemptId;
+    private Long attemptId;  // UUID yerine Long
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;

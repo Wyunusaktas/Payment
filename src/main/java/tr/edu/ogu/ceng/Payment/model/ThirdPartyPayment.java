@@ -15,9 +15,9 @@ import java.util.UUID;
 public class ThirdPartyPayment {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "third_party_payment_id")
-    private UUID thirdPartyPaymentId;
+    private Long thirdPartyPaymentId;  // UUID yerine Long
 
     @ManyToOne
     @JoinColumn(name = "payment_id", referencedColumnName = "payment_id")

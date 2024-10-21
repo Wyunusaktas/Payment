@@ -14,8 +14,9 @@ import java.time.LocalDateTime;
 public class Currency {
 
     @Id
-    @Column(name = "currency_code", length = 3)
-    private String currencyCode;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "currency_code")
+    private Long id;  // UUID yerine Long
 
     @Column(name = "currency_name", nullable = false, length = 50)
     private String currencyName;

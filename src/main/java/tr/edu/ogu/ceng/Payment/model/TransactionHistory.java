@@ -15,9 +15,9 @@ import java.util.UUID;
 public class TransactionHistory {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "history_id")
-    private UUID historyId;
+    private Long historyId;  // UUID yerine Long
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;

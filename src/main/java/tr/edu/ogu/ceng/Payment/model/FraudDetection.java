@@ -15,9 +15,9 @@ import java.util.UUID;
 public class FraudDetection {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "fraud_case_id")
-    private UUID fraudCaseId;
+    private Long fraudCaseId;  // UUID yerine Long
 
     @ManyToOne
     @JoinColumn(name = "payment_id", referencedColumnName = "payment_id")

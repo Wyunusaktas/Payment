@@ -15,9 +15,9 @@ import java.util.UUID;
 public class Refund {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "refund_id")
-    private UUID refundId;
+    private Long refundId;  // UUID yerine Long
 
     @ManyToOne
     @JoinColumn(name = "payment_id", referencedColumnName = "payment_id")
