@@ -2,7 +2,7 @@ spring:
   application:
     name: Payment
   datasource:
-    url: jdbc:postgresql://localhost:5432/Payment
+    url: jdbc:postgresql://localhost:5432/ilerijava
     username: devuser
     password: devpassword 
     driver-class-name: org.postgresql.Driver
@@ -16,9 +16,15 @@ spring:
     locations: classpath:db/migration
 
 microservices:
-  order: http://localhost:8001
-  user: http://localhost:8002
+  user: http://localhost:8007
+  order: http://localhost:8003
+  gateway: http://localhost:8011
+  payment: http://localhost:8006
+  product: http://localhost:8002
+  invoice: http://localhost:8008
   notification: http://localhost:8004
+  cart: http://localhost:8005
+  shipping: http://localhost:8011
 
 server:
   port: 8006
