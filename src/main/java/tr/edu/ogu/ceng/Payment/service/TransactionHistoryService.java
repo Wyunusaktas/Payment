@@ -1,5 +1,6 @@
 package tr.edu.ogu.ceng.Payment.service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tr.edu.ogu.ceng.Payment.model.TransactionHistory;
@@ -26,7 +27,14 @@ public class TransactionHistoryService {
         return transactionHistoryRepository.save(transactionHistory);
     }
 
-    public void deleteById(Long id) {
-        transactionHistoryRepository.deleteById(id);
+    @Transactional
+    public void softDelete(Long id, String deletedBy) {
+        Optional<TransactionHistory> transactionHistoryOptional = transactionHistoryRepository.findById(id);
+        if (transactionHistoryOptional.isPresent()) {
+            TransactionHistory transactionHistory = transactionHistoryOptional.get();
+            transactionHistory.setDeletedAt(java.time.LocalDateTime.now());
+            transactionHistory.setDeletedBy(deletedBy);
+            transactionHistoryRepository.save(transactionHistory);
+        }
     }
 }

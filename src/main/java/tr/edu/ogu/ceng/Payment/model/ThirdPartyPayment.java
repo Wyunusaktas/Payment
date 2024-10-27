@@ -3,6 +3,7 @@ package tr.edu.ogu.ceng.Payment.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Where;
 
 
 import java.time.LocalDateTime;
@@ -12,7 +13,8 @@ import java.util.UUID;
 @Table(name = "third_party_payments")
 @NoArgsConstructor
 @Data
-public class ThirdPartyPayment {
+@Where(clause = "deleted_at IS NULL")
+public class ThirdPartyPayment extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

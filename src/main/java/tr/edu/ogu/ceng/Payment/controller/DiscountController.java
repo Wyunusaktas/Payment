@@ -36,8 +36,9 @@ public class DiscountController {
         return discountService.save(discount);
     }
 
+    // Soft delete işlemi için güncellenmiş endpoint
     @DeleteMapping("/{id}")
-    public void deleteDiscount(@PathVariable Long id) {
-        discountService.deleteById(id);
+    public void softDeleteDiscount(@PathVariable Long id) {
+        discountService.softDelete(id, "system"); // "system" yerine geçerli kullanıcı bilgisi eklenebilir
     }
 }

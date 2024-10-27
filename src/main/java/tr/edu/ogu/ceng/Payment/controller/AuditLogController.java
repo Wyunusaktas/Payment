@@ -36,8 +36,9 @@ public class AuditLogController {
         return auditLogService.save(auditLog);
     }
 
+    // Soft delete işlemi için güncellenmiş endpoint
     @DeleteMapping("/{id}")
-    public void deleteAuditLog(@PathVariable Long id) {
-        auditLogService.deleteById(id);
+    public void softDeleteAuditLog(@PathVariable Long id) {
+        auditLogService.softDelete(id, "system"); // "system" yerine geçerli kullanıcı bilgisi eklenebilir
     }
 }

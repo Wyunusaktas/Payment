@@ -36,8 +36,9 @@ public class RefundController {
         return refundService.save(refund);
     }
 
+    // Soft delete işlemi için güncellenmiş endpoint
     @DeleteMapping("/{id}")
-    public void deleteRefund(@PathVariable Long id) {
-        refundService.deleteById(id);
+    public void softDeleteRefund(@PathVariable Long id) {
+        refundService.softDelete(id, "system"); // "system" yerine geçerli kullanıcı bilgisi eklenebilir
     }
 }

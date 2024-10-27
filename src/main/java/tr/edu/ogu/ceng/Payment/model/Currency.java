@@ -3,6 +3,7 @@ package tr.edu.ogu.ceng.Payment.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Where;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -11,7 +12,8 @@ import java.time.LocalDateTime;
 @Table(name = "currencies")
 @NoArgsConstructor
 @Data
-public class Currency {
+@Where(clause = "deleted_at IS NULL")
+public class Currency extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -32,12 +32,13 @@ public class CurrencyController {
 
     @PutMapping("/{id}")
     public Currency updateCurrency(@PathVariable Long id, @RequestBody Currency currency) {
-        currency.setId(id);  // ID'yi set et
+        currency.setId(id);  // ID'yi ayarla
         return currencyService.save(currency);
     }
 
+    // Soft delete işlemi için güncellenmiş endpoint
     @DeleteMapping("/{id}")
-    public void deleteCurrency(@PathVariable Long id) {
-        currencyService.deleteById(id);
+    public void softDeleteCurrency(@PathVariable Long id) {
+        currencyService.softDelete(id, "system"); // "system" yerine geçerli kullanıcı bilgisi eklenebilir
     }
 }

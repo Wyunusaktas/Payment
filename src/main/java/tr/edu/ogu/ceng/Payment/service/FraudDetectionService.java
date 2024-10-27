@@ -1,5 +1,6 @@
 package tr.edu.ogu.ceng.Payment.service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tr.edu.ogu.ceng.Payment.model.FraudDetection;
@@ -26,7 +27,14 @@ public class FraudDetectionService {
         return fraudDetectionRepository.save(fraudDetection);
     }
 
-    public void deleteById(Long id) {
-        fraudDetectionRepository.deleteById(id);
+    @Transactional
+    public void softDelete(Long id, String deletedBy) {
+        Optional<FraudDetection> fraudDetectionOptional = fraudDetectionRepository.findById(id);
+        if (fraudDetectionOptional.isPresent()) {
+            FraudDetection fraudDetection = fraudDetectionOptional.get();
+            fraudDetection.setDeletedAt(java.time.LocalDateTime.now());
+            fraudDetection.setDeletedBy(deletedBy);
+            fraudDetectionRepository.save(fraudDetection);
+        }
     }
 }

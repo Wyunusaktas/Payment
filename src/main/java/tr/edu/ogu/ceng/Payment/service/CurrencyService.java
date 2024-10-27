@@ -1,5 +1,6 @@
 package tr.edu.ogu.ceng.Payment.service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tr.edu.ogu.ceng.Payment.model.Currency;
@@ -26,7 +27,15 @@ public class CurrencyService {
         return currencyRepository.save(currency);
     }
 
-    public void deleteById(Long id) {
-        currencyRepository.deleteById(id);
+    // Soft delete işlemi için güncellenmiş metod
+    @Transactional
+    public void softDelete(Long id, String deletedBy) {
+        Optional<Currency> currencyOptional = currencyRepository.findById(id);
+        if (currencyOptional.isPresent()) {
+            Currency currency = currencyOptional.get();
+            currency.setDeletedAt(java.time.LocalDateTime.now());
+            currency.setDeletedBy(deletedBy);
+            currencyRepository.save(currency);
+        }
     }
 }

@@ -32,12 +32,13 @@ public class PaymentController {
 
     @PutMapping("/{id}")
     public Payment updatePayment(@PathVariable Long id, @RequestBody Payment payment) {
-        payment.setPaymentId(id);  // ID'yi set et
+        payment.setPaymentId(id);  // ID'yi ayarla
         return paymentService.save(payment);
     }
 
+    // Soft delete işlemi için güncellenmiş endpoint
     @DeleteMapping("/{id}")
-    public void deletePayment(@PathVariable Long id) {
-        paymentService.deleteById(id);
+    public void softDeletePayment(@PathVariable Long id) {
+        paymentService.softDelete(id, "system"); // "system" yerine geçerli kullanıcı bilgisi eklenebilir
     }
 }

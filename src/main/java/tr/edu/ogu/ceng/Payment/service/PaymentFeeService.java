@@ -1,5 +1,6 @@
 package tr.edu.ogu.ceng.Payment.service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tr.edu.ogu.ceng.Payment.model.PaymentFee;
@@ -26,7 +27,15 @@ public class PaymentFeeService {
         return paymentFeeRepository.save(paymentFee);
     }
 
-    public void deleteById(Long id) {
-        paymentFeeRepository.deleteById(id);
+    // Soft delete işlemi için güncellenmiş metod
+    @Transactional
+    public void softDelete(Long id, String deletedBy) {
+        Optional<PaymentFee> paymentFeeOptional = paymentFeeRepository.findById(id);
+        if (paymentFeeOptional.isPresent()) {
+            PaymentFee paymentFee = paymentFeeOptional.get();
+            paymentFee.setDeletedAt(java.time.LocalDateTime.now());
+            paymentFee.setDeletedBy(deletedBy);
+            paymentFeeRepository.save(paymentFee);
+        }
     }
 }

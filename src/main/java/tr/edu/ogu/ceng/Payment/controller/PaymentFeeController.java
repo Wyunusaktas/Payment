@@ -36,8 +36,9 @@ public class PaymentFeeController {
         return paymentFeeService.save(paymentFee);
     }
 
+    // Soft delete işlemi için güncellenmiş endpoint
     @DeleteMapping("/{id}")
-    public void deletePaymentFee(@PathVariable Long id) {
-        paymentFeeService.deleteById(id);
+    public void softDeletePaymentFee(@PathVariable Long id) {
+        paymentFeeService.softDelete(id, "system"); // "system" yerine geçerli kullanıcı bilgisi eklenebilir
     }
 }

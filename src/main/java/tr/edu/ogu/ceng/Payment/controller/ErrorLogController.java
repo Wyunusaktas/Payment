@@ -37,7 +37,7 @@ public class ErrorLogController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteErrorLog(@PathVariable Long id) {
-        errorLogService.deleteById(id);
+    public void softDeleteErrorLog(@PathVariable Long id) {
+        errorLogService.softDelete(id, "system"); // "system" yerine kullanıcı bilgisi eklenebilir
     }
 }

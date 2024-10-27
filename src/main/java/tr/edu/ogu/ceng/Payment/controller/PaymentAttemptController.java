@@ -36,8 +36,9 @@ public class PaymentAttemptController {
         return paymentAttemptService.save(paymentAttempt);
     }
 
+    // Soft delete işlemi için güncellenmiş endpoint
     @DeleteMapping("/{id}")
-    public void deletePaymentAttempt(@PathVariable Long id) {
-        paymentAttemptService.deleteById(id);
+    public void softDeletePaymentAttempt(@PathVariable Long id) {
+        paymentAttemptService.softDelete(id, "system"); // "system" yerine geçerli kullanıcı bilgisi eklenebilir
     }
 }

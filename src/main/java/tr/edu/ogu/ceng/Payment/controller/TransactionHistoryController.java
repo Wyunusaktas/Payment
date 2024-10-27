@@ -37,7 +37,7 @@ public class TransactionHistoryController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteTransactionHistory(@PathVariable Long id) {
-        transactionHistoryService.deleteById(id);
+    public void softDeleteTransactionHistory(@PathVariable Long id) {
+        transactionHistoryService.softDelete(id, "system"); // "system" yerine kullanıcı bilgisi eklenebilir
     }
 }

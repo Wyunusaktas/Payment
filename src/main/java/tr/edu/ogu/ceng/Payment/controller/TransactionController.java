@@ -32,12 +32,13 @@ public class TransactionController {
 
     @PutMapping("/{id}")
     public Transaction updateTransaction(@PathVariable Long id, @RequestBody Transaction transaction) {
-        transaction.setTransactionId(id);  // ID'yi set et
+        transaction.setTransactionId(id);  // ID'yi ayarla
         return transactionService.save(transaction);
     }
 
+    // Soft delete işlemi için güncellenmiş endpoint
     @DeleteMapping("/{id}")
-    public void deleteTransaction(@PathVariable Long id) {
-        transactionService.deleteById(id);
+    public void softDeleteTransaction(@PathVariable Long id) {
+        transactionService.softDelete(id, "system"); // "system" yerine geçerli kullanıcı bilgisi eklenebilir
     }
 }

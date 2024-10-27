@@ -36,8 +36,9 @@ public class ThirdPartyPaymentController {
         return thirdPartyPaymentService.save(thirdPartyPayment);
     }
 
+    // Soft delete işlemi için güncellenmiş endpoint
     @DeleteMapping("/{id}")
-    public void deleteThirdPartyPayment(@PathVariable Long id) {
-        thirdPartyPaymentService.deleteById(id);
+    public void softDeleteThirdPartyPayment(@PathVariable Long id) {
+        thirdPartyPaymentService.softDelete(id, "system"); // "system" yerine geçerli kullanıcı bilgisi eklenebilir
     }
 }

@@ -37,7 +37,7 @@ public class ChargebackController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteChargeback(@PathVariable Long id) {
-        chargebackService.deleteById(id);
+    public void softDeleteChargeback(@PathVariable Long id) {
+        chargebackService.softDelete(id, "system"); // "system" yerine kullanıcı bilgisi eklenebilir
     }
 }

@@ -9,13 +9,15 @@ import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.hibernate.annotations.Where;
 
 @Entity
 @Table(name = "settings")
 @NoArgsConstructor
 @Data
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
-public class Setting {
+@Where(clause = "deleted_at IS NULL")
+public class Setting extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)

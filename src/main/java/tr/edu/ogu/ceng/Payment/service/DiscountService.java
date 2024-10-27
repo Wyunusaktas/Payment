@@ -1,5 +1,6 @@
 package tr.edu.ogu.ceng.Payment.service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tr.edu.ogu.ceng.Payment.model.Discount;
@@ -26,7 +27,14 @@ public class DiscountService {
         return discountRepository.save(discount);
     }
 
-    public void deleteById(Long id) {
-        discountRepository.deleteById(id);
+    @Transactional
+    public void softDelete(Long id, String deletedBy) {
+        Optional<Discount> discountOptional = discountRepository.findById(id);
+        if (discountOptional.isPresent()) {
+            Discount discount = discountOptional.get();
+            discount.setDeletedAt(java.time.LocalDateTime.now());
+            discount.setDeletedBy(deletedBy);
+            discountRepository.save(discount);
+        }
     }
 }

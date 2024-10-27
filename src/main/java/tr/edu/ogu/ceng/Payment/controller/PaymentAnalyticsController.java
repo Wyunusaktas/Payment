@@ -37,7 +37,7 @@ public class PaymentAnalyticsController {
     }
 
     @DeleteMapping("/{id}")
-    public void deletePaymentAnalytics(@PathVariable Long id) {
-        paymentAnalyticsService.deleteById(id);
+    public void softDeletePaymentAnalytics(@PathVariable Long id) {
+        paymentAnalyticsService.softDelete(id, "system"); // "system" yerine kullanıcı bilgisi eklenebilir
     }
 }

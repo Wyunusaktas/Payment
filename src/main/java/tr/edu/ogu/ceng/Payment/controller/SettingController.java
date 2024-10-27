@@ -42,7 +42,7 @@ public class SettingController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteSetting(@PathVariable Long id) {
-        settingService.deleteById(id);
+    public void softDeleteSetting(@PathVariable Long id) {
+        settingService.softDelete(id, "system");
     }
 }

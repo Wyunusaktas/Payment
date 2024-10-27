@@ -37,7 +37,7 @@ public class SessionController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteSession(@PathVariable Long id) {
-        sessionService.deleteById(id);
+    public void softDeleteSession(@PathVariable Long id) {
+        sessionService.softDelete(id, "system"); // "system" yerine kullanıcı bilgisi eklenebilir
     }
 }

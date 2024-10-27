@@ -2,6 +2,7 @@ package tr.edu.ogu.ceng.Payment.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tr.edu.ogu.ceng.Payment.model.Refund;
 import tr.edu.ogu.ceng.Payment.repository.RefundRepository;
 
@@ -26,7 +27,15 @@ public class RefundService {
         return refundRepository.save(refund);
     }
 
-    public void deleteById(Long id) {
-        refundRepository.deleteById(id);
+    // Soft delete işlemi için güncellenmiş metod
+    @Transactional
+    public void softDelete(Long id, String deletedBy) {
+        Optional<Refund> refundOptional = refundRepository.findById(id);
+        if (refundOptional.isPresent()) {
+            Refund refund = refundOptional.get();
+            refund.setDeletedAt(java.time.LocalDateTime.now());
+            refund.setDeletedBy(deletedBy);
+            refundRepository.save(refund);
+        }
     }
 }

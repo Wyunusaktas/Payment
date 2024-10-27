@@ -1,5 +1,6 @@
 package tr.edu.ogu.ceng.Payment.service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tr.edu.ogu.ceng.Payment.model.Chargeback;
@@ -26,7 +27,14 @@ public class ChargebackService {
         return chargebackRepository.save(chargeback);
     }
 
-    public void deleteById(Long id) {
-        chargebackRepository.deleteById(id);
+    @Transactional
+    public void softDelete(Long id, String deletedBy) {
+        Optional<Chargeback> chargebackOptional = chargebackRepository.findById(id);
+        if (chargebackOptional.isPresent()) {
+            Chargeback chargeback = chargebackOptional.get();
+            chargeback.setDeletedAt(java.time.LocalDateTime.now());
+            chargeback.setDeletedBy(deletedBy);
+            chargebackRepository.save(chargeback);
+        }
     }
 }

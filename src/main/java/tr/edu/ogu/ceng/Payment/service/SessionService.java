@@ -1,5 +1,6 @@
 package tr.edu.ogu.ceng.Payment.service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tr.edu.ogu.ceng.Payment.model.Session;
@@ -26,7 +27,14 @@ public class SessionService {
         return sessionRepository.save(session);
     }
 
-    public void deleteById(Long id) {
-        sessionRepository.deleteById(id);
+    @Transactional
+    public void softDelete(Long id, String deletedBy) {
+        Optional<Session> sessionOptional = sessionRepository.findById(id);
+        if (sessionOptional.isPresent()) {
+            Session session = sessionOptional.get();
+            session.setDeletedAt(java.time.LocalDateTime.now());
+            session.setDeletedBy(deletedBy);
+            sessionRepository.save(session);
+        }
     }
 }

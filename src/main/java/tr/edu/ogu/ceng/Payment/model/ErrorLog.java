@@ -3,6 +3,7 @@ package tr.edu.ogu.ceng.Payment.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Where;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -11,7 +12,8 @@ import java.util.UUID;
 @Table(name = "error_logs")
 @NoArgsConstructor
 @Data
-public class ErrorLog {
+@Where(clause = "deleted_at IS NULL")
+public class ErrorLog extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -37,7 +37,7 @@ public class FraudDetectionController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteFraudDetection(@PathVariable Long id) {
-        fraudDetectionService.deleteById(id);
+    public void softDeleteFraudDetection(@PathVariable Long id) {
+        fraudDetectionService.softDelete(id, "system"); // "system" yerine geçerli kullanıcı bilgisi eklenebilir
     }
 }

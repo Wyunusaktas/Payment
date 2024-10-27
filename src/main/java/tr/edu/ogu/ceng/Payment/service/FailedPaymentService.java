@@ -1,5 +1,6 @@
 package tr.edu.ogu.ceng.Payment.service;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tr.edu.ogu.ceng.Payment.model.FailedPayment;
@@ -26,7 +27,15 @@ public class FailedPaymentService {
         return failedPaymentRepository.save(failedPayment);
     }
 
-    public void deleteById(Long id) {
-        failedPaymentRepository.deleteById(id);
+    // Soft delete işlemi için güncellenmiş metod
+    @Transactional
+    public void softDelete(Long id, String deletedBy) {
+        Optional<FailedPayment> failedPaymentOptional = failedPaymentRepository.findById(id);
+        if (failedPaymentOptional.isPresent()) {
+            FailedPayment failedPayment = failedPaymentOptional.get();
+            failedPayment.setDeletedAt(java.time.LocalDateTime.now());
+            failedPayment.setDeletedBy(deletedBy);
+            failedPaymentRepository.save(failedPayment);
+        }
     }
 }

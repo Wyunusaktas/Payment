@@ -3,6 +3,7 @@ package tr.edu.ogu.ceng.Payment.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Where;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -12,7 +13,8 @@ import java.util.UUID;
 @Table(name = "payment_methods")
 @NoArgsConstructor
 @Data
-public class PaymentMethod {
+@Where(clause = "deleted_at IS NULL")
+public class PaymentMethod extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
