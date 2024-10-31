@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 
 @Data
 public class PaymentAnalyticsDTO {
+    private Long analyticsId;
     private double totalPayments;
     private double totalRefunds;
     private double averageTransactionValue;

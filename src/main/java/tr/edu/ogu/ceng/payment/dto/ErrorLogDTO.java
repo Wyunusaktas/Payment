@@ -7,5 +7,8 @@ import java.time.LocalDateTime;
 public class ErrorLogDTO {
     private Long errorId;
     private String errorMessage;
+    private String stackTrace;
     private LocalDateTime occurredAt;
+    private boolean resolved;
+    private LocalDateTime resolvedAt;
 }

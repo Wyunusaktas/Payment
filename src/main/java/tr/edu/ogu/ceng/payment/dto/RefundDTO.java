@@ -11,4 +11,6 @@ public class RefundDTO {
     private String refundReason;
     private String status;
     private LocalDateTime refundDate;
+    private String refundMethod;
+    private LocalDateTime refundIssuedAt;
 }

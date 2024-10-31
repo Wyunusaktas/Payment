@@ -4,7 +4,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class PaymentDetailDTO {
+public class PaymentDTO {
     private Long paymentId;
     private Long userId;
     private double amount;
@@ -12,9 +12,11 @@ public class PaymentDetailDTO {
     private String status;
     private String paymentMethod;
     private String description;
+    private LocalDateTime updatedAt;
     private LocalDateTime transactionDate;
     private String externalReference;
     private double discountApplied;
     private double feeCharged;
     private boolean recurring;
+    private String paymentChannel;
 }

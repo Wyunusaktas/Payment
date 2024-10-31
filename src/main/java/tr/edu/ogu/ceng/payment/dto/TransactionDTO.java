@@ -4,7 +4,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class TransactionDetailDTO {
+public class TransactionDTO {
     private Long transactionId;
     private Long paymentId;
     private Long orderId;
@@ -13,4 +13,5 @@ public class TransactionDetailDTO {
     private String currency;
     private String description;
     private LocalDateTime transactionDate;
+    private LocalDateTime updatedAt;
 }

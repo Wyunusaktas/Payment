@@ -4,11 +4,12 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class FailedPaymentDetailDTO {
-    private Long failedPaymentId;
+public class PaymentAttemptDTO {
+    private Long attemptId;
     private Long userId;
+    private Long paymentMethodId;
     private double amount;
-    private String failureReason;
-    private String paymentMethodId;
+    private String attemptStatus;
     private LocalDateTime attemptDate;
+    private String errorMessage;
 }

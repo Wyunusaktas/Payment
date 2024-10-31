@@ -4,7 +4,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class DiscountDetailDTO {
+public class DiscountDTO {
     private Long discountId;
     private String code;
     private double discountAmount;

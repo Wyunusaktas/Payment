@@ -1,14 +1,14 @@
 package tr.edu.ogu.ceng.payment.dto;
 
 import lombok.Data;
-
 import java.time.LocalDateTime;
 
 @Data
-public class TransactionSummaryDTO {
-    private Long transactionId;
-    private String status;
+public class PaymentFeeDTO {
+    private Long feeId;
+    private Long paymentId;
+    private String feeType;
     private double amount;
     private String currency;
-    private LocalDateTime transactionDate;
+    private LocalDateTime createdAt;
 }
