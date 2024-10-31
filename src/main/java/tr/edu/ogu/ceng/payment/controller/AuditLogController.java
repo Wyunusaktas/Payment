@@ -1,0 +1,44 @@
+package tr.edu.ogu.ceng.payment.controller;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+import tr.edu.ogu.ceng.payment.model.AuditLog;
+import tr.edu.ogu.ceng.payment.service.AuditLogService;
+
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/api/v1/audit-log")
+public class AuditLogController {
+
+    private final AuditLogService auditLogService;
+
+    @GetMapping
+    public List<AuditLog> getAllAuditLogs() {
+        return auditLogService.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public Optional<AuditLog> getAuditLog(@PathVariable Long id) {
+        return auditLogService.findById(id);
+    }
+
+    @PostMapping
+    public AuditLog createAuditLog(@RequestBody AuditLog auditLog) {
+        return auditLogService.save(auditLog);
+    }
+
+    @PutMapping("/{id}")
+    public AuditLog updateAuditLog(@PathVariable Long id, @RequestBody AuditLog auditLog) {
+        auditLog.setLogId(id);  // ID'yi set et
+        return auditLogService.save(auditLog);
+    }
+
+    // Soft delete işlemi için güncellenmiş endpoint
+    @DeleteMapping("/{id}")
+    public void softDeleteAuditLog(@PathVariable Long id) {
+        auditLogService.softDelete(id, "system"); // "system" yerine geçerli kullanıcı bilgisi eklenebilir
+    }
+}

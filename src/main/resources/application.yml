@@ -21,7 +21,7 @@ spring:
 microservices:
   user: http://localhost:8007
   order: http://localhost:8003
-  gateway: http://localhost:8011
+  gateway: http://localhost:8001
   payment: http://localhost:8006
   product: http://localhost:8002
   invoice: http://localhost:8008
