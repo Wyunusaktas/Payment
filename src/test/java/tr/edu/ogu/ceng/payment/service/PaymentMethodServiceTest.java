@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -13,7 +14,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.PaymentMethod;
+import tr.edu.ogu.ceng.payment.dto.PaymentMethodDTO;
+import tr.edu.ogu.ceng.payment.entity.PaymentMethod;
 import tr.edu.ogu.ceng.payment.repository.PaymentMethodRepository;
 
 import java.time.LocalDate;
@@ -42,20 +44,23 @@ public class PaymentMethodServiceTest {
     @Autowired
     private PaymentMethodService paymentMethodService;
 
-    private PaymentMethod paymentMethod;
+    @Autowired
+    private ModelMapper modelMapper;
+
+    private PaymentMethodDTO paymentMethodDTO;
 
     @BeforeEach
     void setUp() {
         reset(paymentMethodRepository);
 
-        paymentMethod = new PaymentMethod();
-        paymentMethod.setMethodId(1L);
-        paymentMethod.setUserId(UUID.randomUUID());
-        paymentMethod.setType("Credit Card");
-        paymentMethod.setProvider("Visa");
-        paymentMethod.setAccountNumber("123456789");
-        paymentMethod.setExpiryDate(LocalDate.now().plusYears(2));
-        paymentMethod.setCreatedAt(LocalDateTime.now());
+        paymentMethodDTO = new PaymentMethodDTO();
+        paymentMethodDTO.setMethodId(1L);
+        paymentMethodDTO.setUserId(UUID.randomUUID());
+        paymentMethodDTO.setType("Credit Card");
+        paymentMethodDTO.setProvider("Visa");
+        paymentMethodDTO.setAccountNumber("123456789");
+        paymentMethodDTO.setExpiryDate(LocalDate.now().plusYears(2));
+        paymentMethodDTO.setCreatedAt(LocalDateTime.now());
     }
 
     @AfterEach
@@ -67,12 +72,13 @@ public class PaymentMethodServiceTest {
 
     @Test
     void testCreatePaymentMethod() {
+        PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
         when(paymentMethodRepository.save(any(PaymentMethod.class))).thenReturn(paymentMethod);
 
-        PaymentMethod createdMethod = paymentMethodService.save(paymentMethod);
+        PaymentMethodDTO createdMethodDTO = paymentMethodService.save(paymentMethodDTO);
 
-        assertNotNull(createdMethod, "PaymentMethod creation failed, returned object is null.");
-        assertEquals(paymentMethod.getMethodId(), createdMethod.getMethodId());
+        assertNotNull(createdMethodDTO, "PaymentMethod creation failed, returned object is null.");
+        assertEquals(paymentMethodDTO.getMethodId(), createdMethodDTO.getMethodId());
         verify(paymentMethodRepository, times(1)).save(any(PaymentMethod.class));
     }
 
@@ -80,46 +86,49 @@ public class PaymentMethodServiceTest {
     void testFindPaymentMethodById_NotFound() {
         when(paymentMethodRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<PaymentMethod> foundMethod = paymentMethodService.findById(999L);
+        Optional<PaymentMethodDTO> foundMethodDTO = paymentMethodService.findById(999L);
 
-        assertFalse(foundMethod.isPresent(), "PaymentMethod should not be found.");
+        assertFalse(foundMethodDTO.isPresent(), "PaymentMethod should not be found.");
         verify(paymentMethodRepository, times(1)).findById(999L);
     }
 
     @Test
     void testFindPaymentMethodById() {
-        when(paymentMethodRepository.findById(paymentMethod.getMethodId())).thenReturn(Optional.of(paymentMethod));
+        PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
+        when(paymentMethodRepository.findById(paymentMethodDTO.getMethodId())).thenReturn(Optional.of(paymentMethod));
 
-        Optional<PaymentMethod> foundMethod = paymentMethodService.findById(paymentMethod.getMethodId());
+        Optional<PaymentMethodDTO> foundMethodDTO = paymentMethodService.findById(paymentMethodDTO.getMethodId());
 
-        assertTrue(foundMethod.isPresent(), "PaymentMethod not found.");
-        assertEquals(paymentMethod.getMethodId(), foundMethod.get().getMethodId());
-        verify(paymentMethodRepository, times(1)).findById(paymentMethod.getMethodId());
+        assertTrue(foundMethodDTO.isPresent(), "PaymentMethod not found.");
+        assertEquals(paymentMethodDTO.getMethodId(), foundMethodDTO.get().getMethodId());
+        verify(paymentMethodRepository, times(1)).findById(paymentMethodDTO.getMethodId());
     }
 
     @Test
     void testUpdatePaymentMethod() {
-        paymentMethod.setProvider("MasterCard");
+        paymentMethodDTO.setProvider("MasterCard");
+        PaymentMethod updatedPaymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
 
-        when(paymentMethodRepository.save(any(PaymentMethod.class))).thenReturn(paymentMethod);
+        when(paymentMethodRepository.save(any(PaymentMethod.class))).thenReturn(updatedPaymentMethod);
 
-        PaymentMethod updatedMethod = paymentMethodService.save(paymentMethod);
+        PaymentMethodDTO updatedMethodDTO = paymentMethodService.save(paymentMethodDTO);
 
-        assertNotNull(updatedMethod, "PaymentMethod update failed, returned object is null.");
-        assertEquals("MasterCard", updatedMethod.getProvider(), "Provider did not update correctly.");
-        verify(paymentMethodRepository, times(1)).save(paymentMethod);
+        assertNotNull(updatedMethodDTO, "PaymentMethod update failed, returned object is null.");
+        assertEquals("MasterCard", updatedMethodDTO.getProvider(), "Provider did not update correctly.");
+        verify(paymentMethodRepository, times(1)).save(any(PaymentMethod.class));
     }
 
     @Test
     void testSoftDeletePaymentMethod() {
+        PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
         ArgumentCaptor<PaymentMethod> captor = ArgumentCaptor.forClass(PaymentMethod.class);
 
-        when(paymentMethodRepository.findById(paymentMethod.getMethodId())).thenReturn(Optional.of(paymentMethod));
+        when(paymentMethodRepository.findById(paymentMethodDTO.getMethodId())).thenReturn(Optional.of(paymentMethod));
         when(paymentMethodRepository.save(any(PaymentMethod.class))).thenReturn(paymentMethod);
 
-        paymentMethodService.softDelete(paymentMethod.getMethodId(), "testUser");
+        paymentMethodService.softDelete(paymentMethodDTO.getMethodId(), "testUser");
 
-        verify(paymentMethodRepository, times(1)).findById(paymentMethod.getMethodId());
+        verify(paymentMethodRepository, times(1)).findById(paymentMethodDTO.getMethodId());
         verify(paymentMethodRepository, times(1)).save(captor.capture());
 
         PaymentMethod softDeletedMethod = captor.getValue();
@@ -139,26 +148,29 @@ public class PaymentMethodServiceTest {
 
     @Test
     void testFindAllPaymentMethods() {
+        PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
         when(paymentMethodRepository.findAll()).thenReturn(List.of(paymentMethod));
 
-        List<PaymentMethod> methodsList = paymentMethodService.findAll();
+        List<PaymentMethodDTO> methodsListDTO = paymentMethodService.findAll();
 
-        assertNotNull(methodsList, "PaymentMethod list is null.");
-        assertFalse(methodsList.isEmpty(), "PaymentMethod list is empty.");
-        assertEquals(1, methodsList.size(), "PaymentMethod list size mismatch.");
+        assertNotNull(methodsListDTO, "PaymentMethod list is null.");
+        assertFalse(methodsListDTO.isEmpty(), "PaymentMethod list is empty.");
+        assertEquals(1, methodsListDTO.size(), "PaymentMethod list size mismatch.");
         verify(paymentMethodRepository, times(1)).findAll();
     }
 
     @Test
     void testSavePaymentMethodNotNull() {
-        PaymentMethod method = new PaymentMethod();
-        method.setProvider("Visa");
-        when(paymentMethodRepository.save(any(PaymentMethod.class))).thenReturn(method);
+        PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
+        paymentMethod.setProvider("Visa");
 
-        PaymentMethod result = paymentMethodService.save(method);
+        when(paymentMethodRepository.save(any(PaymentMethod.class))).thenReturn(paymentMethod);
+
+        PaymentMethodDTO result = paymentMethodService.save(paymentMethodDTO);
 
         assertNotNull(result, "Saved payment method should not be null");
         assertEquals("Visa", result.getProvider(), "Provider should match");
     }
+
 
 }

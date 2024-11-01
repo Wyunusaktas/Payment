@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
-public class CurrencyDTO {
+public class CurrencyDTO extends BaseDTO {
     private Long id;  // Güncellenmiş Long id
     private String currencyName;
     private String symbol;

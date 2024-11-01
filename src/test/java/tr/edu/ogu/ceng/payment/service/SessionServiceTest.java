@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -12,7 +13,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.Session;
+import tr.edu.ogu.ceng.payment.dto.SessionDTO;
+import tr.edu.ogu.ceng.payment.entity.Session;
 import tr.edu.ogu.ceng.payment.repository.SessionRepository;
 
 import java.time.LocalDateTime;
@@ -40,30 +42,34 @@ public class SessionServiceTest {
     @Autowired
     private SessionService sessionService;
 
-    private Session session;
+    @Autowired
+    private ModelMapper modelMapper;
+
+    private SessionDTO sessionDTO;
 
     @BeforeEach
     void setUp() {
         reset(sessionRepository);
 
-        session = new Session();
-        session.setSessionId(1L);
-        session.setUserId(UUID.randomUUID());
-        session.setIpAddress("192.168.1.1");
-        session.setDevice("Laptop");
-        session.setLocation("Office");
-        session.setLoginTime(LocalDateTime.now());
-        session.setStatus("Active");
+        sessionDTO = new SessionDTO();
+        sessionDTO.setSessionId(1L);
+        sessionDTO.setUserId(UUID.randomUUID());
+        sessionDTO.setIpAddress("192.168.1.1");
+        sessionDTO.setDevice("Laptop");
+        sessionDTO.setLocation("Office");
+        sessionDTO.setLoginTime(LocalDateTime.now());
+        sessionDTO.setStatus("Active");
     }
 
     @Test
     void testCreateSession() {
+        Session session = modelMapper.map(sessionDTO, Session.class);
         when(sessionRepository.save(any(Session.class))).thenReturn(session);
 
-        Session createdSession = sessionService.save(session);
+        SessionDTO createdSessionDTO = sessionService.save(sessionDTO);
 
-        assertNotNull(createdSession, "Session creation failed, returned object is null.");
-        assertEquals(session.getSessionId(), createdSession.getSessionId());
+        assertNotNull(createdSessionDTO, "Session creation failed, returned object is null.");
+        assertEquals(sessionDTO.getSessionId(), createdSessionDTO.getSessionId());
         verify(sessionRepository, times(1)).save(any(Session.class));
     }
 
@@ -71,46 +77,49 @@ public class SessionServiceTest {
     void testFindSessionById_NotFound() {
         when(sessionRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<Session> foundSession = sessionService.findById(999L);
+        Optional<SessionDTO> foundSessionDTO = sessionService.findById(999L);
 
-        assertFalse(foundSession.isPresent(), "Session should not be found.");
+        assertFalse(foundSessionDTO.isPresent(), "Session should not be found.");
         verify(sessionRepository, times(1)).findById(999L);
     }
 
     @Test
     void testFindSessionById() {
-        when(sessionRepository.findById(session.getSessionId())).thenReturn(Optional.of(session));
+        Session session = modelMapper.map(sessionDTO, Session.class);
+        when(sessionRepository.findById(sessionDTO.getSessionId())).thenReturn(Optional.of(session));
 
-        Optional<Session> foundSession = sessionService.findById(session.getSessionId());
+        Optional<SessionDTO> foundSessionDTO = sessionService.findById(sessionDTO.getSessionId());
 
-        assertTrue(foundSession.isPresent(), "Session not found.");
-        assertEquals(session.getSessionId(), foundSession.get().getSessionId());
-        verify(sessionRepository, times(1)).findById(session.getSessionId());
+        assertTrue(foundSessionDTO.isPresent(), "Session not found.");
+        assertEquals(sessionDTO.getSessionId(), foundSessionDTO.get().getSessionId());
+        verify(sessionRepository, times(1)).findById(sessionDTO.getSessionId());
     }
 
     @Test
     void testUpdateSession() {
-        session.setStatus("Inactive");
+        sessionDTO.setStatus("Inactive");
+        Session updatedSession = modelMapper.map(sessionDTO, Session.class);
 
-        when(sessionRepository.save(any(Session.class))).thenReturn(session);
+        when(sessionRepository.save(any(Session.class))).thenReturn(updatedSession);
 
-        Session updatedSession = sessionService.save(session);
+        SessionDTO updatedSessionDTO = sessionService.save(sessionDTO);
 
-        assertNotNull(updatedSession, "Session update failed, returned object is null.");
-        assertEquals("Inactive", updatedSession.getStatus(), "Status did not update correctly.");
-        verify(sessionRepository, times(1)).save(session);
+        assertNotNull(updatedSessionDTO, "Session update failed, returned object is null.");
+        assertEquals("Inactive", updatedSessionDTO.getStatus(), "Status did not update correctly.");
+        verify(sessionRepository, times(1)).save(any(Session.class));
     }
 
     @Test
     void testSoftDeleteSession() {
+        Session session = modelMapper.map(sessionDTO, Session.class);
         ArgumentCaptor<Session> captor = ArgumentCaptor.forClass(Session.class);
 
-        when(sessionRepository.findById(session.getSessionId())).thenReturn(Optional.of(session));
+        when(sessionRepository.findById(sessionDTO.getSessionId())).thenReturn(Optional.of(session));
         when(sessionRepository.save(any(Session.class))).thenReturn(session);
 
-        sessionService.softDelete(session.getSessionId(), "testUser");
+        sessionService.softDelete(sessionDTO.getSessionId(), "testUser");
 
-        verify(sessionRepository, times(1)).findById(session.getSessionId());
+        verify(sessionRepository, times(1)).findById(sessionDTO.getSessionId());
         verify(sessionRepository, times(1)).save(captor.capture());
 
         Session softDeletedSession = captor.getValue();
@@ -130,13 +139,14 @@ public class SessionServiceTest {
 
     @Test
     void testFindAllSessions() {
+        Session session = modelMapper.map(sessionDTO, Session.class);
         when(sessionRepository.findAll()).thenReturn(List.of(session));
 
-        List<Session> sessionList = sessionService.findAll();
+        List<SessionDTO> sessionDTOList = sessionService.findAll();
 
-        assertNotNull(sessionList, "Session list is null.");
-        assertFalse(sessionList.isEmpty(), "Session list is empty.");
-        assertEquals(1, sessionList.size(), "Session list size mismatch.");
+        assertNotNull(sessionDTOList, "Session list is null.");
+        assertFalse(sessionDTOList.isEmpty(), "Session list is empty.");
+        assertEquals(1, sessionDTOList.size(), "Session list size mismatch.");
         verify(sessionRepository, times(1)).findAll();
     }
 
@@ -151,5 +161,7 @@ public class SessionServiceTest {
         assertNotNull(session.getDeletedAt(), "Deleted session should have a non-null deletedAt field");
         assertEquals("testUser", session.getDeletedBy(), "DeletedBy should match the provided user");
     }
+
+
 
 }

@@ -2,7 +2,7 @@ package tr.edu.ogu.ceng.payment.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import tr.edu.ogu.ceng.payment.model.ThirdPartyPayment;
+import tr.edu.ogu.ceng.payment.dto.ThirdPartyPaymentDTO;
 import tr.edu.ogu.ceng.payment.service.ThirdPartyPaymentService;
 
 import java.util.List;
@@ -16,29 +16,28 @@ public class ThirdPartyPaymentController {
     private final ThirdPartyPaymentService thirdPartyPaymentService;
 
     @GetMapping
-    public List<ThirdPartyPayment> getAllThirdPartyPayments() {
+    public List<ThirdPartyPaymentDTO> getAllThirdPartyPayments() {
         return thirdPartyPaymentService.findAll();
     }
 
     @GetMapping("/{id}")
-    public Optional<ThirdPartyPayment> getThirdPartyPayment(@PathVariable Long id) {
+    public Optional<ThirdPartyPaymentDTO> getThirdPartyPayment(@PathVariable Long id) {
         return thirdPartyPaymentService.findById(id);
     }
 
     @PostMapping
-    public ThirdPartyPayment createThirdPartyPayment(@RequestBody ThirdPartyPayment thirdPartyPayment) {
-        return thirdPartyPaymentService.save(thirdPartyPayment);
+    public ThirdPartyPaymentDTO createThirdPartyPayment(@RequestBody ThirdPartyPaymentDTO thirdPartyPaymentDTO) {
+        return thirdPartyPaymentService.save(thirdPartyPaymentDTO);
     }
 
     @PutMapping("/{id}")
-    public ThirdPartyPayment updateThirdPartyPayment(@PathVariable Long id, @RequestBody ThirdPartyPayment thirdPartyPayment) {
-        thirdPartyPayment.setThirdPartyPaymentId(id);  // ID'yi set et
-        return thirdPartyPaymentService.save(thirdPartyPayment);
+    public ThirdPartyPaymentDTO updateThirdPartyPayment(@PathVariable Long id, @RequestBody ThirdPartyPaymentDTO thirdPartyPaymentDTO) {
+        thirdPartyPaymentDTO.setThirdPartyPaymentId(id);  // ID'yi ayarla
+        return thirdPartyPaymentService.save(thirdPartyPaymentDTO);
     }
 
-    // Soft delete işlemi için güncellenmiş endpoint
     @DeleteMapping("/{id}")
     public void softDeleteThirdPartyPayment(@PathVariable Long id) {
-        thirdPartyPaymentService.softDelete(id, "system"); // "system" yerine geçerli kullanıcı bilgisi eklenebilir
+        thirdPartyPaymentService.softDelete(id, "system");
     }
 }

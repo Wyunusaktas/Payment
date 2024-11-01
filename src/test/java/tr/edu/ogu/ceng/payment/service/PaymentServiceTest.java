@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -13,7 +14,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.Payment;
+import tr.edu.ogu.ceng.payment.dto.PaymentDTO;
+import tr.edu.ogu.ceng.payment.entity.Payment;
 import tr.edu.ogu.ceng.payment.repository.PaymentRepository;
 
 import java.math.BigDecimal;
@@ -42,19 +44,22 @@ public class PaymentServiceTest {
     @Autowired
     private PaymentService paymentService;
 
-    private Payment payment;
+    @Autowired
+    private ModelMapper modelMapper;
+
+    private PaymentDTO paymentDTO;
 
     @BeforeEach
     void setUp() {
         reset(paymentRepository);
 
-        payment = new Payment();
-        payment.setPaymentId(1L);
-        payment.setUserId(UUID.randomUUID());
-        payment.setAmount(new BigDecimal("150.75"));
-        payment.setStatus("Pending");
-        payment.setTransactionDate(LocalDateTime.now());
-        payment.setDescription("Test payment description");
+        paymentDTO = new PaymentDTO();
+        paymentDTO.setPaymentId(1L);
+        paymentDTO.setUserId(UUID.randomUUID());
+        paymentDTO.setAmount(BigDecimal.valueOf(150.75));
+        paymentDTO.setStatus("Pending");
+        paymentDTO.setTransactionDate(LocalDateTime.now());
+        paymentDTO.setDescription("Test payment description");
     }
 
     @AfterEach
@@ -66,12 +71,13 @@ public class PaymentServiceTest {
 
     @Test
     void testCreatePayment() {
+        Payment payment = modelMapper.map(paymentDTO, Payment.class);
         when(paymentRepository.save(any(Payment.class))).thenReturn(payment);
 
-        Payment createdPayment = paymentService.save(payment);
+        PaymentDTO createdPaymentDTO = paymentService.save(paymentDTO);
 
-        assertNotNull(createdPayment, "Payment creation failed, returned object is null.");
-        assertEquals(payment.getPaymentId(), createdPayment.getPaymentId());
+        assertNotNull(createdPaymentDTO, "Payment creation failed, returned object is null.");
+        assertEquals(paymentDTO.getPaymentId(), createdPaymentDTO.getPaymentId());
         verify(paymentRepository, times(1)).save(any(Payment.class));
     }
 
@@ -79,46 +85,49 @@ public class PaymentServiceTest {
     void testFindPaymentById_NotFound() {
         when(paymentRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<Payment> foundPayment = paymentService.findById(999L);
+        Optional<PaymentDTO> foundPaymentDTO = paymentService.findById(999L);
 
-        assertFalse(foundPayment.isPresent(), "Payment should not be found.");
+        assertFalse(foundPaymentDTO.isPresent(), "Payment should not be found.");
         verify(paymentRepository, times(1)).findById(999L);
     }
 
     @Test
     void testFindPaymentById() {
-        when(paymentRepository.findById(payment.getPaymentId())).thenReturn(Optional.of(payment));
+        Payment payment = modelMapper.map(paymentDTO, Payment.class);
+        when(paymentRepository.findById(paymentDTO.getPaymentId())).thenReturn(Optional.of(payment));
 
-        Optional<Payment> foundPayment = paymentService.findById(payment.getPaymentId());
+        Optional<PaymentDTO> foundPaymentDTO = paymentService.findById(paymentDTO.getPaymentId());
 
-        assertTrue(foundPayment.isPresent(), "Payment not found.");
-        assertEquals(payment.getPaymentId(), foundPayment.get().getPaymentId());
-        verify(paymentRepository, times(1)).findById(payment.getPaymentId());
+        assertTrue(foundPaymentDTO.isPresent(), "Payment not found.");
+        assertEquals(paymentDTO.getPaymentId(), foundPaymentDTO.get().getPaymentId());
+        verify(paymentRepository, times(1)).findById(paymentDTO.getPaymentId());
     }
 
     @Test
     void testUpdatePayment() {
-        payment.setStatus("Completed");
+        paymentDTO.setStatus("Completed");
+        Payment updatedPayment = modelMapper.map(paymentDTO, Payment.class);
 
-        when(paymentRepository.save(any(Payment.class))).thenReturn(payment);
+        when(paymentRepository.save(any(Payment.class))).thenReturn(updatedPayment);
 
-        Payment updatedPayment = paymentService.save(payment);
+        PaymentDTO updatedPaymentDTO = paymentService.save(paymentDTO);
 
-        assertNotNull(updatedPayment, "Payment update failed, returned object is null.");
-        assertEquals("Completed", updatedPayment.getStatus(), "Status did not update correctly.");
-        verify(paymentRepository, times(1)).save(payment);
+        assertNotNull(updatedPaymentDTO, "Payment update failed, returned object is null.");
+        assertEquals("Completed", updatedPaymentDTO.getStatus(), "Status did not update correctly.");
+        verify(paymentRepository, times(1)).save(any(Payment.class));
     }
 
     @Test
     void testSoftDeletePayment() {
+        Payment payment = modelMapper.map(paymentDTO, Payment.class);
         ArgumentCaptor<Payment> captor = ArgumentCaptor.forClass(Payment.class);
 
-        when(paymentRepository.findById(payment.getPaymentId())).thenReturn(Optional.of(payment));
+        when(paymentRepository.findById(paymentDTO.getPaymentId())).thenReturn(Optional.of(payment));
         when(paymentRepository.save(any(Payment.class))).thenReturn(payment);
 
-        paymentService.softDelete(payment.getPaymentId(), "testUser");
+        paymentService.softDelete(paymentDTO.getPaymentId(), "testUser");
 
-        verify(paymentRepository, times(1)).findById(payment.getPaymentId());
+        verify(paymentRepository, times(1)).findById(paymentDTO.getPaymentId());
         verify(paymentRepository, times(1)).save(captor.capture());
 
         Payment softDeletedPayment = captor.getValue();
@@ -138,26 +147,28 @@ public class PaymentServiceTest {
 
     @Test
     void testFindAllPayments() {
+        Payment payment = modelMapper.map(paymentDTO, Payment.class);
         when(paymentRepository.findAll()).thenReturn(List.of(payment));
 
-        List<Payment> payments = paymentService.findAll();
+        List<PaymentDTO> paymentsDTOList = paymentService.findAll();
 
-        assertNotNull(payments, "Payment list is null.");
-        assertFalse(payments.isEmpty(), "Payment list is empty.");
-        assertEquals(1, payments.size(), "Payment list size mismatch.");
+        assertNotNull(paymentsDTOList, "Payment list is null.");
+        assertFalse(paymentsDTOList.isEmpty(), "Payment list is empty.");
+        assertEquals(1, paymentsDTOList.size(), "Payment list size mismatch.");
         verify(paymentRepository, times(1)).findAll();
     }
 
     @Test
     void testFindByIdReturnsPayment() {
-        Payment payment = new Payment();
+        Payment payment = modelMapper.map(paymentDTO, Payment.class);
         payment.setAmount(BigDecimal.valueOf(200.0));
         when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
 
-        Optional<Payment> result = paymentService.findById(1L);
+        Optional<PaymentDTO> result = paymentService.findById(1L);
 
         assertTrue(result.isPresent(), "findById should return a payment when the ID is valid");
-        assertEquals(BigDecimal.valueOf(200.0), result.get().getAmount(), "Payment amount should match");
+        assertEquals(0, result.get().getAmount().compareTo(BigDecimal.valueOf(200.0)), "Payment amount should match");
     }
+
 
 }

@@ -1,15 +1,18 @@
 package tr.edu.ogu.ceng.payment.dto;
 
 import lombok.Data;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
-public class TransactionDTO {
+public class TransactionDTO extends BaseDTO {
     private Long transactionId;
     private Long paymentId;
-    private Long orderId;
+    private UUID orderId;
     private String status;
-    private double amount;
+    private BigDecimal amount;
     private String currency;
     private String description;
     private LocalDateTime transactionDate;

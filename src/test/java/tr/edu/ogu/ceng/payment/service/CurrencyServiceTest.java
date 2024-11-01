@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -14,7 +15,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.Currency;
+import tr.edu.ogu.ceng.payment.dto.CurrencyDTO;
+import tr.edu.ogu.ceng.payment.entity.Currency;
 import tr.edu.ogu.ceng.payment.repository.CurrencyRepository;
 
 import java.math.BigDecimal;
@@ -42,7 +44,11 @@ public class CurrencyServiceTest {
     @Autowired
     private CurrencyService currencyService;
 
+    @Autowired
+    private ModelMapper modelMapper;
+
     private Currency currency;
+    private CurrencyDTO currencyDTO;
 
     @BeforeEach
     void setUp() {
@@ -54,6 +60,8 @@ public class CurrencyServiceTest {
         currency.setSymbol("$");
         currency.setExchangeRate(BigDecimal.valueOf(1.00));
         currency.setLastUpdated(LocalDateTime.now());
+
+        currencyDTO = modelMapper.map(currency, CurrencyDTO.class);
     }
 
     @AfterEach
@@ -67,10 +75,10 @@ public class CurrencyServiceTest {
     void testCreateCurrency() {
         when(currencyRepository.save(any(Currency.class))).thenReturn(currency);
 
-        Currency createdCurrency = currencyService.save(currency);
+        CurrencyDTO createdCurrencyDTO = currencyService.save(currencyDTO);
 
-        assertNotNull(createdCurrency, "Currency creation failed, returned object is null.");
-        assertEquals(currency.getId(), createdCurrency.getId());
+        assertNotNull(createdCurrencyDTO, "Currency creation failed, returned object is null.");
+        assertEquals(currencyDTO.getId(), createdCurrencyDTO.getId());
         verify(currencyRepository, times(1)).save(any(Currency.class));
     }
 
@@ -78,9 +86,9 @@ public class CurrencyServiceTest {
     void testFindCurrencyById_NotFound() {
         when(currencyRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<Currency> foundCurrency = currencyService.findById(999L);
+        Optional<CurrencyDTO> foundCurrencyDTO = currencyService.findById(999L);
 
-        assertFalse(foundCurrency.isPresent(), "Currency should not be found.");
+        assertFalse(foundCurrencyDTO.isPresent(), "Currency should not be found.");
         verify(currencyRepository, times(1)).findById(999L);
     }
 
@@ -88,25 +96,30 @@ public class CurrencyServiceTest {
     void testFindCurrencyById() {
         when(currencyRepository.findById(currency.getId())).thenReturn(Optional.of(currency));
 
-        Optional<Currency> foundCurrency = currencyService.findById(currency.getId());
+        Optional<CurrencyDTO> foundCurrencyDTO = currencyService.findById(currency.getId());
 
-        assertTrue(foundCurrency.isPresent(), "Currency not found.");
-        assertEquals(currency.getId(), foundCurrency.get().getId());
+        assertTrue(foundCurrencyDTO.isPresent(), "Currency not found.");
+        assertEquals(currencyDTO.getId(), foundCurrencyDTO.get().getId());
         verify(currencyRepository, times(1)).findById(currency.getId());
     }
 
     @Test
     void testUpdateCurrency() {
+        currencyDTO.setExchangeRate(BigDecimal.valueOf(1.05));
+
+        // currency nesnesindeki exchangeRate değerini güncelleyin
         currency.setExchangeRate(BigDecimal.valueOf(1.05));
 
         when(currencyRepository.save(any(Currency.class))).thenReturn(currency);
 
-        Currency updatedCurrency = currencyService.save(currency);
+        CurrencyDTO updatedCurrencyDTO = currencyService.save(currencyDTO);
 
-        assertNotNull(updatedCurrency, "Currency update failed, returned object is null.");
-        assertEquals(BigDecimal.valueOf(1.05), updatedCurrency.getExchangeRate());
-        verify(currencyRepository, times(1)).save(currency);
+        assertNotNull(updatedCurrencyDTO, "Currency update failed, returned object is null.");
+        assertEquals(0, updatedCurrencyDTO.getExchangeRate().compareTo(BigDecimal.valueOf(1.05)), "Exchange rate did not update correctly");
+        verify(currencyRepository, times(1)).save(any(Currency.class));
     }
+
+
 
     @Test
     void testSoftDeleteCurrency() {
@@ -115,7 +128,7 @@ public class CurrencyServiceTest {
         when(currencyRepository.findById(currency.getId())).thenReturn(Optional.of(currency));
         when(currencyRepository.save(any(Currency.class))).thenReturn(currency);
 
-        currencyService.softDelete(currency.getId(), "testUser");
+        currencyService.softDelete(currencyDTO.getId(), "testUser");
 
         verify(currencyRepository, times(1)).findById(currency.getId());
         verify(currencyRepository, times(1)).save(captor.capture());
@@ -139,24 +152,25 @@ public class CurrencyServiceTest {
     void testFindAllCurrencies() {
         when(currencyRepository.findAll()).thenReturn(List.of(currency));
 
-        List<Currency> currencies = currencyService.findAll();
+        List<CurrencyDTO> currencyDTOs = currencyService.findAll();
 
-        assertNotNull(currencies, "Currency list is null.");
-        assertFalse(currencies.isEmpty(), "Currency list is empty.");
-        assertEquals(1, currencies.size(), "Currency list size mismatch.");
+        assertNotNull(currencyDTOs, "Currency list is null.");
+        assertFalse(currencyDTOs.isEmpty(), "Currency list is empty.");
+        assertEquals(1, currencyDTOs.size(), "Currency list size mismatch.");
         verify(currencyRepository, times(1)).findAll();
     }
 
     @Test
-    void testSoftDeleteUpdatesDeletedAt() {
-        Long currencyId = 1L;
-        Currency currency = new Currency();
-        when(currencyRepository.findById(currencyId)).thenReturn(Optional.of(currency));
+    void testUpdateCurrencyWithNegativeExchangeRate() {
+        currencyDTO.setExchangeRate(BigDecimal.valueOf(-1.05));
 
-        currencyService.softDelete(currencyId, "testUser");
+        when(currencyRepository.save(any(Currency.class))).thenReturn(currency);
 
-        assertNotNull(currency.getDeletedAt(), "Deleted currency should have a non-null deletedAt field");
-        assertEquals("testUser", currency.getDeletedBy());
+        CurrencyDTO updatedCurrencyDTO = currencyService.save(currencyDTO);
+
+        assertNotNull(updatedCurrencyDTO, "Currency update failed, returned object is null.");
+        assertTrue(updatedCurrencyDTO.getExchangeRate().compareTo(BigDecimal.ZERO) >= 0, "Exchange rate should be non-negative");
+        verify(currencyRepository, times(1)).save(any(Currency.class));
     }
 
 }

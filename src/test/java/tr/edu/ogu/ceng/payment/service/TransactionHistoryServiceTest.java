@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -13,7 +14,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.TransactionHistory;
+import tr.edu.ogu.ceng.payment.dto.TransactionHistoryDTO;
+import tr.edu.ogu.ceng.payment.entity.TransactionHistory;
 import tr.edu.ogu.ceng.payment.repository.TransactionHistoryRepository;
 
 import java.math.BigDecimal;
@@ -42,19 +44,22 @@ public class TransactionHistoryServiceTest {
     @Autowired
     private TransactionHistoryService transactionHistoryService;
 
-    private TransactionHistory transactionHistory;
+    @Autowired
+    private ModelMapper modelMapper;
+
+    private TransactionHistoryDTO transactionHistoryDTO;
 
     @BeforeEach
     void setUp() {
         reset(transactionHistoryRepository);
 
-        transactionHistory = new TransactionHistory();
-        transactionHistory.setHistoryId(1L);
-        transactionHistory.setUserId(UUID.randomUUID());
-        transactionHistory.setTransactionType("PURCHASE");
-        transactionHistory.setAmount(new BigDecimal("200.00"));
-        transactionHistory.setTransactionDate(LocalDateTime.now());
-        transactionHistory.setStatus("COMPLETED");
+        transactionHistoryDTO = new TransactionHistoryDTO();
+        transactionHistoryDTO.setHistoryId(1L);
+        transactionHistoryDTO.setUserId(UUID.randomUUID());
+        transactionHistoryDTO.setTransactionType("PURCHASE");
+        transactionHistoryDTO.setAmount(new BigDecimal("200.00"));
+        transactionHistoryDTO.setTransactionDate(LocalDateTime.now());
+        transactionHistoryDTO.setStatus("COMPLETED");
     }
 
     @AfterEach
@@ -66,12 +71,13 @@ public class TransactionHistoryServiceTest {
 
     @Test
     void testCreateTransactionHistory() {
+        TransactionHistory transactionHistory = modelMapper.map(transactionHistoryDTO, TransactionHistory.class);
         when(transactionHistoryRepository.save(any(TransactionHistory.class))).thenReturn(transactionHistory);
 
-        TransactionHistory createdTransactionHistory = transactionHistoryService.save(transactionHistory);
+        TransactionHistoryDTO createdTransactionHistoryDTO = transactionHistoryService.save(transactionHistoryDTO);
 
-        assertNotNull(createdTransactionHistory, "TransactionHistory creation failed, returned object is null.");
-        assertEquals(transactionHistory.getStatus(), createdTransactionHistory.getStatus());
+        assertNotNull(createdTransactionHistoryDTO, "TransactionHistory creation failed, returned object is null.");
+        assertEquals(transactionHistoryDTO.getStatus(), createdTransactionHistoryDTO.getStatus());
         verify(transactionHistoryRepository, times(1)).save(any(TransactionHistory.class));
     }
 
@@ -79,46 +85,49 @@ public class TransactionHistoryServiceTest {
     void testFindTransactionHistoryById_NotFound() {
         when(transactionHistoryRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<TransactionHistory> foundTransactionHistory = transactionHistoryService.findById(999L);
+        Optional<TransactionHistoryDTO> foundTransactionHistoryDTO = transactionHistoryService.findById(999L);
 
-        assertFalse(foundTransactionHistory.isPresent(), "TransactionHistory should not be found.");
+        assertFalse(foundTransactionHistoryDTO.isPresent(), "TransactionHistory should not be found.");
         verify(transactionHistoryRepository, times(1)).findById(999L);
     }
 
     @Test
     void testFindTransactionHistoryById() {
-        when(transactionHistoryRepository.findById(transactionHistory.getHistoryId())).thenReturn(Optional.of(transactionHistory));
+        TransactionHistory transactionHistory = modelMapper.map(transactionHistoryDTO, TransactionHistory.class);
+        when(transactionHistoryRepository.findById(transactionHistoryDTO.getHistoryId())).thenReturn(Optional.of(transactionHistory));
 
-        Optional<TransactionHistory> foundTransactionHistory = transactionHistoryService.findById(transactionHistory.getHistoryId());
+        Optional<TransactionHistoryDTO> foundTransactionHistoryDTO = transactionHistoryService.findById(transactionHistoryDTO.getHistoryId());
 
-        assertTrue(foundTransactionHistory.isPresent(), "TransactionHistory not found.");
-        assertEquals(transactionHistory.getStatus(), foundTransactionHistory.get().getStatus());
-        verify(transactionHistoryRepository, times(1)).findById(transactionHistory.getHistoryId());
+        assertTrue(foundTransactionHistoryDTO.isPresent(), "TransactionHistory not found.");
+        assertEquals(transactionHistoryDTO.getStatus(), foundTransactionHistoryDTO.get().getStatus());
+        verify(transactionHistoryRepository, times(1)).findById(transactionHistoryDTO.getHistoryId());
     }
 
     @Test
     void testUpdateTransactionHistory() {
-        transactionHistory.setStatus("UPDATED");
+        transactionHistoryDTO.setStatus("UPDATED");
+        TransactionHistory updatedTransactionHistory = modelMapper.map(transactionHistoryDTO, TransactionHistory.class);
 
-        when(transactionHistoryRepository.save(any(TransactionHistory.class))).thenReturn(transactionHistory);
+        when(transactionHistoryRepository.save(any(TransactionHistory.class))).thenReturn(updatedTransactionHistory);
 
-        TransactionHistory updatedTransactionHistory = transactionHistoryService.save(transactionHistory);
+        TransactionHistoryDTO updatedTransactionHistoryDTO = transactionHistoryService.save(transactionHistoryDTO);
 
-        assertNotNull(updatedTransactionHistory, "TransactionHistory update failed, returned object is null.");
-        assertEquals("UPDATED", updatedTransactionHistory.getStatus(), "TransactionHistory status did not update correctly.");
-        verify(transactionHistoryRepository, times(1)).save(transactionHistory);
+        assertNotNull(updatedTransactionHistoryDTO, "TransactionHistory update failed, returned object is null.");
+        assertEquals("UPDATED", updatedTransactionHistoryDTO.getStatus(), "TransactionHistory status did not update correctly.");
+        verify(transactionHistoryRepository, times(1)).save(any(TransactionHistory.class));
     }
 
     @Test
     void testSoftDeleteTransactionHistory() {
+        TransactionHistory transactionHistory = modelMapper.map(transactionHistoryDTO, TransactionHistory.class);
         ArgumentCaptor<TransactionHistory> captor = ArgumentCaptor.forClass(TransactionHistory.class);
 
-        when(transactionHistoryRepository.findById(transactionHistory.getHistoryId())).thenReturn(Optional.of(transactionHistory));
+        when(transactionHistoryRepository.findById(transactionHistoryDTO.getHistoryId())).thenReturn(Optional.of(transactionHistory));
         when(transactionHistoryRepository.save(any(TransactionHistory.class))).thenReturn(transactionHistory);
 
-        transactionHistoryService.softDelete(transactionHistory.getHistoryId(), "testUser");
+        transactionHistoryService.softDelete(transactionHistoryDTO.getHistoryId(), "testUser");
 
-        verify(transactionHistoryRepository, times(1)).findById(transactionHistory.getHistoryId());
+        verify(transactionHistoryRepository, times(1)).findById(transactionHistoryDTO.getHistoryId());
         verify(transactionHistoryRepository, times(1)).save(captor.capture());
 
         TransactionHistory softDeletedTransactionHistory = captor.getValue();
@@ -138,13 +147,14 @@ public class TransactionHistoryServiceTest {
 
     @Test
     void testFindAllTransactionHistories() {
+        TransactionHistory transactionHistory = modelMapper.map(transactionHistoryDTO, TransactionHistory.class);
         when(transactionHistoryRepository.findAll()).thenReturn(List.of(transactionHistory));
 
-        List<TransactionHistory> transactionHistoryList = transactionHistoryService.findAll();
+        List<TransactionHistoryDTO> transactionHistoryDTOList = transactionHistoryService.findAll();
 
-        assertNotNull(transactionHistoryList, "TransactionHistory list is null.");
-        assertFalse(transactionHistoryList.isEmpty(), "TransactionHistory list is empty.");
-        assertEquals(1, transactionHistoryList.size(), "TransactionHistory list size mismatch.");
+        assertNotNull(transactionHistoryDTOList, "TransactionHistory list is null.");
+        assertFalse(transactionHistoryDTOList.isEmpty(), "TransactionHistory list is empty.");
+        assertEquals(1, transactionHistoryDTOList.size(), "TransactionHistory list size mismatch.");
         verify(transactionHistoryRepository, times(1)).findAll();
     }
 
@@ -154,10 +164,11 @@ public class TransactionHistoryServiceTest {
         history.setStatus("SUCCESS");
         when(transactionHistoryRepository.findById(1L)).thenReturn(Optional.of(history));
 
-        Optional<TransactionHistory> result = transactionHistoryService.findById(1L);
+        Optional<TransactionHistoryDTO> result = transactionHistoryService.findById(1L);
 
         assertTrue(result.isPresent(), "findById should return a transaction history when the ID is valid");
         assertEquals("SUCCESS", result.get().getStatus(), "Status should match");
     }
+
 
 }

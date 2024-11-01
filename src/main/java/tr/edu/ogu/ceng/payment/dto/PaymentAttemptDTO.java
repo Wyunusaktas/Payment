@@ -1,14 +1,17 @@
 package tr.edu.ogu.ceng.payment.dto;
 
 import lombok.Data;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
-public class PaymentAttemptDTO {
+public class PaymentAttemptDTO extends BaseDTO {
     private Long attemptId;
-    private Long userId;
+    private UUID userId;
     private Long paymentMethodId;
-    private double amount;
+    private BigDecimal amount;
     private String attemptStatus;
     private LocalDateTime attemptDate;
     private String errorMessage;

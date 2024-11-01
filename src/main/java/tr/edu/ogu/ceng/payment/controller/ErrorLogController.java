@@ -2,7 +2,7 @@ package tr.edu.ogu.ceng.payment.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import tr.edu.ogu.ceng.payment.model.ErrorLog;
+import tr.edu.ogu.ceng.payment.dto.ErrorLogDTO;
 import tr.edu.ogu.ceng.payment.service.ErrorLogService;
 
 import java.util.List;
@@ -16,24 +16,24 @@ public class ErrorLogController {
     private final ErrorLogService errorLogService;
 
     @GetMapping
-    public List<ErrorLog> getAllErrorLogs() {
+    public List<ErrorLogDTO> getAllErrorLogs() {
         return errorLogService.findAll();
     }
 
     @GetMapping("/{id}")
-    public Optional<ErrorLog> getErrorLog(@PathVariable Long id) {
+    public Optional<ErrorLogDTO> getErrorLog(@PathVariable Long id) {
         return errorLogService.findById(id);
     }
 
     @PostMapping
-    public ErrorLog createErrorLog(@RequestBody ErrorLog errorLog) {
-        return errorLogService.save(errorLog);
+    public ErrorLogDTO createErrorLog(@RequestBody ErrorLogDTO errorLogDTO) {
+        return errorLogService.save(errorLogDTO);
     }
 
     @PutMapping("/{id}")
-    public ErrorLog updateErrorLog(@PathVariable Long id, @RequestBody ErrorLog errorLog) {
-        errorLog.setErrorId(id);  // ID'yi set et
-        return errorLogService.save(errorLog);
+    public ErrorLogDTO updateErrorLog(@PathVariable Long id, @RequestBody ErrorLogDTO errorLogDTO) {
+        errorLogDTO.setErrorId(id);  // ID'yi ayarla
+        return errorLogService.save(errorLogDTO);
     }
 
     @DeleteMapping("/{id}")

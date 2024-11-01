@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -13,7 +14,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.PaymentAnalytics;
+import tr.edu.ogu.ceng.payment.dto.PaymentAnalyticsDTO;
+import tr.edu.ogu.ceng.payment.entity.PaymentAnalytics;
 import tr.edu.ogu.ceng.payment.repository.PaymentAnalyticsRepository;
 
 import java.math.BigDecimal;
@@ -41,7 +43,11 @@ public class PaymentAnalyticsServiceTest {
     @Autowired
     private PaymentAnalyticsService paymentAnalyticsService;
 
+    @Autowired
+    private ModelMapper modelMapper;
+
     private PaymentAnalytics paymentAnalytics;
+    private PaymentAnalyticsDTO paymentAnalyticsDTO;
 
     @BeforeEach
     void setUp() {
@@ -54,6 +60,8 @@ public class PaymentAnalyticsServiceTest {
         paymentAnalytics.setAverageTransactionValue(new BigDecimal("200.10"));
         paymentAnalytics.setPaymentChannel("Online");
         paymentAnalytics.setReportingDate(LocalDateTime.now());
+
+        paymentAnalyticsDTO = modelMapper.map(paymentAnalytics, PaymentAnalyticsDTO.class);
     }
 
     @AfterEach
@@ -67,10 +75,10 @@ public class PaymentAnalyticsServiceTest {
     void testCreatePaymentAnalytics() {
         when(paymentAnalyticsRepository.save(any(PaymentAnalytics.class))).thenReturn(paymentAnalytics);
 
-        PaymentAnalytics createdAnalytics = paymentAnalyticsService.save(paymentAnalytics);
+        PaymentAnalyticsDTO createdAnalyticsDTO = paymentAnalyticsService.save(paymentAnalyticsDTO);
 
-        assertNotNull(createdAnalytics, "PaymentAnalytics creation failed, returned object is null.");
-        assertEquals(paymentAnalytics.getAnalyticsId(), createdAnalytics.getAnalyticsId());
+        assertNotNull(createdAnalyticsDTO, "PaymentAnalytics creation failed, returned object is null.");
+        assertEquals(paymentAnalyticsDTO.getAnalyticsId(), createdAnalyticsDTO.getAnalyticsId());
         verify(paymentAnalyticsRepository, times(1)).save(any(PaymentAnalytics.class));
     }
 
@@ -78,9 +86,9 @@ public class PaymentAnalyticsServiceTest {
     void testFindPaymentAnalyticsById_NotFound() {
         when(paymentAnalyticsRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<PaymentAnalytics> foundAnalytics = paymentAnalyticsService.findById(999L);
+        Optional<PaymentAnalyticsDTO> foundAnalyticsDTO = paymentAnalyticsService.findById(999L);
 
-        assertFalse(foundAnalytics.isPresent(), "PaymentAnalytics should not be found.");
+        assertFalse(foundAnalyticsDTO.isPresent(), "PaymentAnalytics should not be found.");
         verify(paymentAnalyticsRepository, times(1)).findById(999L);
     }
 
@@ -88,25 +96,27 @@ public class PaymentAnalyticsServiceTest {
     void testFindPaymentAnalyticsById() {
         when(paymentAnalyticsRepository.findById(paymentAnalytics.getAnalyticsId())).thenReturn(Optional.of(paymentAnalytics));
 
-        Optional<PaymentAnalytics> foundAnalytics = paymentAnalyticsService.findById(paymentAnalytics.getAnalyticsId());
+        Optional<PaymentAnalyticsDTO> foundAnalyticsDTO = paymentAnalyticsService.findById(paymentAnalyticsDTO.getAnalyticsId());
 
-        assertTrue(foundAnalytics.isPresent(), "PaymentAnalytics not found.");
-        assertEquals(paymentAnalytics.getAnalyticsId(), foundAnalytics.get().getAnalyticsId());
-        verify(paymentAnalyticsRepository, times(1)).findById(paymentAnalytics.getAnalyticsId());
+        assertTrue(foundAnalyticsDTO.isPresent(), "PaymentAnalytics not found.");
+        assertEquals(paymentAnalyticsDTO.getAnalyticsId(), foundAnalyticsDTO.get().getAnalyticsId());
+        verify(paymentAnalyticsRepository, times(1)).findById(paymentAnalyticsDTO.getAnalyticsId());
     }
 
     @Test
     void testUpdatePaymentAnalytics() {
-        paymentAnalytics.setPaymentChannel("In-Store");
+        paymentAnalyticsDTO.setPaymentChannel("In-Store");
 
-        when(paymentAnalyticsRepository.save(any(PaymentAnalytics.class))).thenReturn(paymentAnalytics);
+        PaymentAnalytics updatedPaymentAnalytics = modelMapper.map(paymentAnalyticsDTO, PaymentAnalytics.class);
+        when(paymentAnalyticsRepository.save(any(PaymentAnalytics.class))).thenReturn(updatedPaymentAnalytics);
 
-        PaymentAnalytics updatedAnalytics = paymentAnalyticsService.save(paymentAnalytics);
+        PaymentAnalyticsDTO updatedAnalyticsDTO = paymentAnalyticsService.save(paymentAnalyticsDTO);
 
-        assertNotNull(updatedAnalytics, "PaymentAnalytics update failed, returned object is null.");
-        assertEquals("In-Store", updatedAnalytics.getPaymentChannel(), "Payment channel did not update correctly.");
-        verify(paymentAnalyticsRepository, times(1)).save(paymentAnalytics);
+        assertNotNull(updatedAnalyticsDTO, "PaymentAnalytics update failed, returned object is null.");
+        assertEquals("In-Store", updatedAnalyticsDTO.getPaymentChannel(), "Payment channel did not update correctly.");
+        verify(paymentAnalyticsRepository, times(1)).save(any(PaymentAnalytics.class));
     }
+
 
     @Test
     void testSoftDeletePaymentAnalytics() {
@@ -115,9 +125,9 @@ public class PaymentAnalyticsServiceTest {
         when(paymentAnalyticsRepository.findById(paymentAnalytics.getAnalyticsId())).thenReturn(Optional.of(paymentAnalytics));
         when(paymentAnalyticsRepository.save(any(PaymentAnalytics.class))).thenReturn(paymentAnalytics);
 
-        paymentAnalyticsService.softDelete(paymentAnalytics.getAnalyticsId(), "testUser");
+        paymentAnalyticsService.softDelete(paymentAnalyticsDTO.getAnalyticsId(), "testUser");
 
-        verify(paymentAnalyticsRepository, times(1)).findById(paymentAnalytics.getAnalyticsId());
+        verify(paymentAnalyticsRepository, times(1)).findById(paymentAnalyticsDTO.getAnalyticsId());
         verify(paymentAnalyticsRepository, times(1)).save(captor.capture());
 
         PaymentAnalytics softDeletedAnalytics = captor.getValue();
@@ -139,24 +149,48 @@ public class PaymentAnalyticsServiceTest {
     void testFindAllPaymentAnalytics() {
         when(paymentAnalyticsRepository.findAll()).thenReturn(List.of(paymentAnalytics));
 
-        List<PaymentAnalytics> analyticsList = paymentAnalyticsService.findAll();
+        List<PaymentAnalyticsDTO> analyticsDTOList = paymentAnalyticsService.findAll();
 
-        assertNotNull(analyticsList, "PaymentAnalytics list is null.");
-        assertFalse(analyticsList.isEmpty(), "PaymentAnalytics list is empty.");
-        assertEquals(1, analyticsList.size(), "PaymentAnalytics list size mismatch.");
+        assertNotNull(analyticsDTOList, "PaymentAnalytics list is null.");
+        assertFalse(analyticsDTOList.isEmpty(), "PaymentAnalytics list is empty.");
+        assertEquals(1, analyticsDTOList.size(), "PaymentAnalytics list size mismatch.");
         verify(paymentAnalyticsRepository, times(1)).findAll();
     }
 
     @Test
     void testSavePaymentAnalytics() {
-        PaymentAnalytics analytics = new PaymentAnalytics();
-        analytics.setTotalPayments(BigDecimal.valueOf(500.0));
-        when(paymentAnalyticsRepository.save(any(PaymentAnalytics.class))).thenReturn(analytics);
+        PaymentAnalyticsDTO analyticsDTO = new PaymentAnalyticsDTO();
+        analyticsDTO.setTotalPayments(BigDecimal.valueOf(500.0));
 
-        PaymentAnalytics result = paymentAnalyticsService.save(analytics);
+        // paymentAnalytics nesnesinin totalPayments alanını güncelleyerek uyumlu hale getirin
+        paymentAnalytics.setTotalPayments(BigDecimal.valueOf(500.0));
 
-        assertNotNull(result, "Saved PaymentAnalytics should not be null");
+        when(paymentAnalyticsRepository.save(any(PaymentAnalytics.class))).thenReturn(paymentAnalytics);
+
+        PaymentAnalyticsDTO result = paymentAnalyticsService.save(analyticsDTO);
+
+        assertNotNull(result, "Saved PaymentAnalyticsDTO should not be null");
         assertEquals(BigDecimal.valueOf(500.0), result.getTotalPayments(), "Total payments should match");
     }
+
+    @Test
+    void testSavePaymentAnalyticsWithZeroTotalPayments() {
+        // paymentAnalytics nesnesinin totalPayments alanını sıfır olarak ayarlayın
+        paymentAnalytics.setTotalPayments(BigDecimal.ZERO);
+        PaymentAnalyticsDTO analyticsDTO = new PaymentAnalyticsDTO();
+        analyticsDTO.setTotalPayments(BigDecimal.ZERO);
+
+        // Repository save işleminde sıfır olarak ayarlanmış paymentAnalytics nesnesini döndür
+        when(paymentAnalyticsRepository.save(any(PaymentAnalytics.class))).thenReturn(paymentAnalytics);
+
+        PaymentAnalyticsDTO result = paymentAnalyticsService.save(analyticsDTO);
+
+        assertNotNull(result, "Saved PaymentAnalyticsDTO should not be null");
+        assertEquals(0, result.getTotalPayments().compareTo(BigDecimal.ZERO), "Total payments should be zero");
+        verify(paymentAnalyticsRepository, times(1)).save(any(PaymentAnalytics.class));
+    }
+
+
+
 
 }

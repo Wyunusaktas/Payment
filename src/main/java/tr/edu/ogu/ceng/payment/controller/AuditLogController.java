@@ -1,8 +1,10 @@
 package tr.edu.ogu.ceng.payment.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import tr.edu.ogu.ceng.payment.model.AuditLog;
+import tr.edu.ogu.ceng.payment.dto.AuditLogDTO;
 import tr.edu.ogu.ceng.payment.service.AuditLogService;
 
 import java.util.List;
@@ -16,29 +18,33 @@ public class AuditLogController {
     private final AuditLogService auditLogService;
 
     @GetMapping
-    public List<AuditLog> getAllAuditLogs() {
-        return auditLogService.findAll();
+    public ResponseEntity<List<AuditLogDTO>> getAllAuditLogs() {
+        List<AuditLogDTO> auditLogs = auditLogService.findAll();
+        return ResponseEntity.ok(auditLogs);
     }
 
     @GetMapping("/{id}")
-    public Optional<AuditLog> getAuditLog(@PathVariable Long id) {
-        return auditLogService.findById(id);
+    public ResponseEntity<AuditLogDTO> getAuditLog(@PathVariable Long id) {
+        Optional<AuditLogDTO> auditLogDTO = auditLogService.findById(id);
+        return auditLogDTO.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public AuditLog createAuditLog(@RequestBody AuditLog auditLog) {
-        return auditLogService.save(auditLog);
+    public ResponseEntity<AuditLogDTO> createAuditLog(@RequestBody AuditLogDTO auditLogDTO) {
+        AuditLogDTO createdAuditLog = auditLogService.save(auditLogDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdAuditLog);
     }
 
     @PutMapping("/{id}")
-    public AuditLog updateAuditLog(@PathVariable Long id, @RequestBody AuditLog auditLog) {
-        auditLog.setLogId(id);  // ID'yi set et
-        return auditLogService.save(auditLog);
+    public ResponseEntity<AuditLogDTO> updateAuditLog(@PathVariable Long id, @RequestBody AuditLogDTO auditLogDTO) {
+        auditLogDTO.setLogId(id);  // ID'yi ayarla
+        AuditLogDTO updatedAuditLog = auditLogService.save(auditLogDTO);
+        return ResponseEntity.ok(updatedAuditLog);
     }
 
-    // Soft delete işlemi için güncellenmiş endpoint
     @DeleteMapping("/{id}")
-    public void softDeleteAuditLog(@PathVariable Long id) {
-        auditLogService.softDelete(id, "system"); // "system" yerine geçerli kullanıcı bilgisi eklenebilir
+    public ResponseEntity<Void> softDeleteAuditLog(@PathVariable Long id) {
+        auditLogService.softDelete(id, "system");
+        return ResponseEntity.noContent().build();
     }
 }

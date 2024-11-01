@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
-public class SessionDTO {
+public class SessionDTO extends BaseDTO {
     private Long sessionId;
     private UUID userId;
     private String ipAddress;

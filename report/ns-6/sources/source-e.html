@@ -1,0 +1,184 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > SessionService</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">tr.edu.ogu.ceng.payment.service</a>
+</div>
+
+<h1>Coverage Summary for Class: SessionService (tr.edu.ogu.ceng.payment.service)</h1>
+
+<table class="coverageStats">
+
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">SessionService</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (5/5)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (2/2)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (16/16)
+  </span>
+</td>
+</tr>
+  <tr>
+    <td class="name">SessionService$$SpringCGLIB$$0</td>
+  </tr>
+<tr>
+  <td class="name"><strong>Total</strong></td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (5/5)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (2/2)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (16/16)
+  </span>
+</td>
+</tr>
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package tr.edu.ogu.ceng.payment.service;
+&nbsp;
+&nbsp;import jakarta.transaction.Transactional;
+&nbsp;import lombok.RequiredArgsConstructor;
+&nbsp;import org.modelmapper.ModelMapper;
+&nbsp;import org.springframework.stereotype.Service;
+&nbsp;import tr.edu.ogu.ceng.payment.dto.SessionDTO;
+&nbsp;import tr.edu.ogu.ceng.payment.entity.Session;
+&nbsp;import tr.edu.ogu.ceng.payment.repository.SessionRepository;
+&nbsp;
+&nbsp;import java.util.List;
+&nbsp;import java.util.Optional;
+&nbsp;import java.util.stream.Collectors;
+&nbsp;
+<b class="fc">&nbsp;@RequiredArgsConstructor</b>
+&nbsp;@Service
+&nbsp;public class SessionService {
+&nbsp;
+&nbsp;    private final SessionRepository sessionRepository;
+&nbsp;    private final ModelMapper modelMapper;
+&nbsp;
+&nbsp;    public List&lt;SessionDTO&gt; findAll() {
+<b class="fc">&nbsp;        return sessionRepository.findAll()</b>
+<b class="fc">&nbsp;                .stream()</b>
+<b class="fc">&nbsp;                .map(session -&gt; modelMapper.map(session, SessionDTO.class))</b>
+<b class="fc">&nbsp;                .collect(Collectors.toList());</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public Optional&lt;SessionDTO&gt; findById(Long id) {
+<b class="fc">&nbsp;        return sessionRepository.findById(id)</b>
+<b class="fc">&nbsp;                .map(session -&gt; modelMapper.map(session, SessionDTO.class));</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public SessionDTO save(SessionDTO sessionDTO) {
+<b class="fc">&nbsp;        Session session = modelMapper.map(sessionDTO, Session.class);</b>
+<b class="fc">&nbsp;        Session savedSession = sessionRepository.save(session);</b>
+<b class="fc">&nbsp;        return modelMapper.map(savedSession, SessionDTO.class);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Transactional
+&nbsp;    public void softDelete(Long id, String deletedBy) {
+<b class="fc">&nbsp;        Optional&lt;Session&gt; sessionOptional = sessionRepository.findById(id);</b>
+<b class="fc">&nbsp;        if (sessionOptional.isPresent()) {</b>
+<b class="fc">&nbsp;            Session session = sessionOptional.get();</b>
+<b class="fc">&nbsp;            session.setDeletedAt(java.time.LocalDateTime.now());</b>
+<b class="fc">&nbsp;            session.setDeletedBy(deletedBy);</b>
+<b class="fc">&nbsp;            sessionRepository.save(session);</b>
+&nbsp;        }
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2024-11-01 05:07</div>
+</div>
+</body>
+</html>

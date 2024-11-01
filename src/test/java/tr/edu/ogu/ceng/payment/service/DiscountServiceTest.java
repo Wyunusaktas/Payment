@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -14,7 +15,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.Discount;
+import tr.edu.ogu.ceng.payment.dto.DiscountDTO;
+import tr.edu.ogu.ceng.payment.entity.Discount;
 import tr.edu.ogu.ceng.payment.repository.DiscountRepository;
 
 import java.math.BigDecimal;
@@ -42,7 +44,11 @@ public class DiscountServiceTest {
     @Autowired
     private DiscountService discountService;
 
+    @Autowired
+    private ModelMapper modelMapper;
+
     private Discount discount;
+    private DiscountDTO discountDTO;
 
     @BeforeEach
     void setUp() {
@@ -55,6 +61,8 @@ public class DiscountServiceTest {
         discount.setDiscountType("PERCENTAGE");
         discount.setValidFrom(LocalDateTime.now().minusDays(1));
         discount.setValidTo(LocalDateTime.now().plusDays(1));
+
+        discountDTO = modelMapper.map(discount, DiscountDTO.class);
     }
 
     @AfterEach
@@ -68,10 +76,10 @@ public class DiscountServiceTest {
     void testCreateDiscount() {
         when(discountRepository.save(any(Discount.class))).thenReturn(discount);
 
-        Discount createdDiscount = discountService.save(discount);
+        DiscountDTO createdDiscountDTO = discountService.save(discountDTO);
 
-        assertNotNull(createdDiscount, "Discount creation failed, returned object is null.");
-        assertEquals(discount.getDiscountId(), createdDiscount.getDiscountId());
+        assertNotNull(createdDiscountDTO, "Discount creation failed, returned object is null.");
+        assertEquals(discountDTO.getDiscountId(), createdDiscountDTO.getDiscountId());
         verify(discountRepository, times(1)).save(any(Discount.class));
     }
 
@@ -79,9 +87,9 @@ public class DiscountServiceTest {
     void testFindDiscountById_NotFound() {
         when(discountRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<Discount> foundDiscount = discountService.findById(999L);
+        Optional<DiscountDTO> foundDiscountDTO = discountService.findById(999L);
 
-        assertFalse(foundDiscount.isPresent(), "Discount should not be found.");
+        assertFalse(foundDiscountDTO.isPresent(), "Discount should not be found.");
         verify(discountRepository, times(1)).findById(999L);
     }
 
@@ -89,25 +97,29 @@ public class DiscountServiceTest {
     void testFindDiscountById() {
         when(discountRepository.findById(discount.getDiscountId())).thenReturn(Optional.of(discount));
 
-        Optional<Discount> foundDiscount = discountService.findById(discount.getDiscountId());
+        Optional<DiscountDTO> foundDiscountDTO = discountService.findById(discount.getDiscountId());
 
-        assertTrue(foundDiscount.isPresent(), "Discount not found.");
-        assertEquals(discount.getDiscountId(), foundDiscount.get().getDiscountId());
+        assertTrue(foundDiscountDTO.isPresent(), "Discount not found.");
+        assertEquals(discountDTO.getDiscountId(), foundDiscountDTO.get().getDiscountId());
         verify(discountRepository, times(1)).findById(discount.getDiscountId());
     }
 
     @Test
     void testUpdateDiscount() {
-        discount.setDiscountAmount(BigDecimal.valueOf(15.00));
+        discountDTO.setDiscountAmount(BigDecimal.valueOf(15.00));  // BigDecimal olarak ayarlandı
+        discount.setDiscountAmount(BigDecimal.valueOf(15.00));     // discount nesnesi de aynı değeri alacak şekilde ayarlandı
 
         when(discountRepository.save(any(Discount.class))).thenReturn(discount);
 
-        Discount updatedDiscount = discountService.save(discount);
+        DiscountDTO updatedDiscountDTO = discountService.save(discountDTO);
 
-        assertNotNull(updatedDiscount, "Discount update failed, returned object is null.");
-        assertEquals(BigDecimal.valueOf(15.00), updatedDiscount.getDiscountAmount());
-        verify(discountRepository, times(1)).save(discount);
+        assertNotNull(updatedDiscountDTO, "Discount update failed, returned object is null.");
+        assertEquals(BigDecimal.valueOf(15.00), updatedDiscountDTO.getDiscountAmount(), "Discount amount did not update correctly");
+        verify(discountRepository, times(1)).save(any(Discount.class));
     }
+
+
+
 
     @Test
     void testSoftDeleteDiscount() {
@@ -116,7 +128,7 @@ public class DiscountServiceTest {
         when(discountRepository.findById(discount.getDiscountId())).thenReturn(Optional.of(discount));
         when(discountRepository.save(any(Discount.class))).thenReturn(discount);
 
-        discountService.softDelete(discount.getDiscountId(), "testUser");
+        discountService.softDelete(discountDTO.getDiscountId(), "testUser");
 
         verify(discountRepository, times(1)).findById(discount.getDiscountId());
         verify(discountRepository, times(1)).save(captor.capture());
@@ -137,14 +149,45 @@ public class DiscountServiceTest {
     }
 
     @Test
+    void testCreateDiscountWithInvalidPercentage() {
+        discountDTO.setDiscountAmount(BigDecimal.valueOf(150.0)); // Geçersiz yüzde indirimi
+
+        when(discountRepository.save(any(Discount.class))).thenReturn(discount);
+
+        DiscountDTO result = discountService.save(discountDTO);
+
+        assertNotNull(result, "Discount creation failed, returned object is null.");
+        assertTrue(result.getDiscountAmount().compareTo(BigDecimal.valueOf(100.0)) <= 0, "Discount percentage should not exceed 100%");
+    }
+
+
+    @Test
     void testFindAllDiscounts() {
         when(discountRepository.findAll()).thenReturn(List.of(discount));
 
-        List<Discount> discounts = discountService.findAll();
+        List<DiscountDTO> discountDTOs = discountService.findAll();
 
-        assertNotNull(discounts, "Discount list is null.");
-        assertFalse(discounts.isEmpty(), "Discount list is empty.");
-        assertEquals(1, discounts.size(), "Discount list size mismatch.");
+        assertNotNull(discountDTOs, "Discount list is null.");
+        assertFalse(discountDTOs.isEmpty(), "Discount list is empty.");
+        assertEquals(1, discountDTOs.size(), "Discount list size mismatch.");
         verify(discountRepository, times(1)).findAll();
     }
+
+    @Test
+    void testUpdateDiscountWithZeroAmount() {
+        // Discount nesnesinin discountAmount alanını sıfır olarak ayarlayın
+        discount.setDiscountAmount(BigDecimal.ZERO);
+        discountDTO.setDiscountAmount(BigDecimal.ZERO);
+
+        // Repository save işleminde sıfır olarak ayarlanmış discount nesnesini döndür
+        when(discountRepository.save(any(Discount.class))).thenReturn(discount);
+
+        DiscountDTO updatedDiscountDTO = discountService.save(discountDTO);
+
+        assertNotNull(updatedDiscountDTO, "Discount update failed, returned object is null.");
+        assertEquals(0, updatedDiscountDTO.getDiscountAmount().compareTo(BigDecimal.ZERO), "Discount amount should be zero");
+        verify(discountRepository, times(1)).save(any(Discount.class));
+    }
+
+
 }

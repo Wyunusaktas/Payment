@@ -1,0 +1,152 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > SettingController</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">tr.edu.ogu.ceng.payment.controller</a>
+</div>
+
+<h1>Coverage Summary for Class: SettingController (tr.edu.ogu.ceng.payment.controller)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">SettingController</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    14,3%
+  </span>
+  <span class="absValue">
+    (1/7)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    12,5%
+  </span>
+  <span class="absValue">
+    (1/8)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package tr.edu.ogu.ceng.payment.controller;
+&nbsp;
+&nbsp;import lombok.RequiredArgsConstructor;
+&nbsp;import org.springframework.web.bind.annotation.*;
+&nbsp;import tr.edu.ogu.ceng.payment.dto.SettingDTO;
+&nbsp;import tr.edu.ogu.ceng.payment.service.SettingService;
+&nbsp;
+&nbsp;import java.util.List;
+&nbsp;import java.util.Optional;
+&nbsp;
+&nbsp;@RestController
+<b class="fc">&nbsp;@RequiredArgsConstructor</b>
+&nbsp;@RequestMapping(&quot;/api/v1/setting&quot;)
+&nbsp;public class SettingController {
+&nbsp;
+&nbsp;    private final SettingService settingService;
+&nbsp;
+&nbsp;    @GetMapping
+&nbsp;    public List&lt;SettingDTO&gt; getAllSettings() {
+<b class="nc">&nbsp;        return settingService.findAll();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @GetMapping(&quot;/{id}&quot;)
+&nbsp;    public Optional&lt;SettingDTO&gt; getSetting(@PathVariable Long id) {
+<b class="nc">&nbsp;        return settingService.findById(id);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @GetMapping(&quot;/key/{key}&quot;)
+&nbsp;    public SettingDTO getSettingByKey(@PathVariable String key) {
+<b class="nc">&nbsp;        return settingService.findBySettingKey(key);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @PostMapping
+&nbsp;    public SettingDTO createSetting(@RequestBody SettingDTO settingDTO) {
+<b class="nc">&nbsp;        return settingService.save(settingDTO);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @PutMapping(&quot;/{id}&quot;)
+&nbsp;    public SettingDTO updateSetting(@PathVariable Long id, @RequestBody SettingDTO settingDTO) {
+<b class="nc">&nbsp;        settingDTO.setId(id);  // ID&#39;yi ayarla</b>
+<b class="nc">&nbsp;        return settingService.save(settingDTO);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @DeleteMapping(&quot;/{id}&quot;)
+&nbsp;    public void softDeleteSetting(@PathVariable Long id) {
+<b class="nc">&nbsp;        settingService.softDelete(id, &quot;system&quot;);</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2024-11-01 05:07</div>
+</div>
+</body>
+</html>

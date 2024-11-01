@@ -1,30 +1,40 @@
 package tr.edu.ogu.ceng.payment.service;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
-import tr.edu.ogu.ceng.payment.model.TransactionHistory;
+import org.springframework.transaction.annotation.Transactional;
+import tr.edu.ogu.ceng.payment.dto.TransactionHistoryDTO;
+import tr.edu.ogu.ceng.payment.entity.TransactionHistory;
 import tr.edu.ogu.ceng.payment.repository.TransactionHistoryRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
 public class TransactionHistoryService {
 
     private final TransactionHistoryRepository transactionHistoryRepository;
+    private final ModelMapper modelMapper;
 
-    public List<TransactionHistory> findAll() {
-        return transactionHistoryRepository.findAll();
+    public List<TransactionHistoryDTO> findAll() {
+        return transactionHistoryRepository.findAll()
+                .stream()
+                .map(transactionHistory -> modelMapper.map(transactionHistory, TransactionHistoryDTO.class))
+                .collect(Collectors.toList());
     }
 
-    public Optional<TransactionHistory> findById(Long id) {
-        return transactionHistoryRepository.findById(id);
+    public Optional<TransactionHistoryDTO> findById(Long id) {
+        return transactionHistoryRepository.findById(id)
+                .map(transactionHistory -> modelMapper.map(transactionHistory, TransactionHistoryDTO.class));
     }
 
-    public TransactionHistory save(TransactionHistory transactionHistory) {
-        return transactionHistoryRepository.save(transactionHistory);
+    public TransactionHistoryDTO save(TransactionHistoryDTO transactionHistoryDTO) {
+        TransactionHistory transactionHistory = modelMapper.map(transactionHistoryDTO, TransactionHistory.class);
+        TransactionHistory savedTransactionHistory = transactionHistoryRepository.save(transactionHistory);
+        return modelMapper.map(savedTransactionHistory, TransactionHistoryDTO.class);
     }
 
     @Transactional

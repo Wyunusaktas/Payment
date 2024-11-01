@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -13,7 +14,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.Transaction;
+import tr.edu.ogu.ceng.payment.dto.TransactionDTO;
+import tr.edu.ogu.ceng.payment.entity.Transaction;
 import tr.edu.ogu.ceng.payment.repository.TransactionRepository;
 
 import java.math.BigDecimal;
@@ -42,18 +44,21 @@ public class TransactionServiceTest {
     @Autowired
     private TransactionService transactionService;
 
-    private Transaction transaction;
+    @Autowired
+    private ModelMapper modelMapper;
+
+    private TransactionDTO transactionDTO;
 
     @BeforeEach
     void setUp() {
         reset(transactionRepository);
 
-        transaction = new Transaction();
-        transaction.setTransactionId(1L);
-        transaction.setOrderId(UUID.randomUUID());
-        transaction.setStatus("COMPLETED");
-        transaction.setTransactionDate(LocalDateTime.now());
-        transaction.setAmount(new BigDecimal("150.50"));
+        transactionDTO = new TransactionDTO();
+        transactionDTO.setTransactionId(1L);
+        transactionDTO.setOrderId(UUID.randomUUID());
+        transactionDTO.setStatus("COMPLETED");
+        transactionDTO.setTransactionDate(LocalDateTime.now());
+        transactionDTO.setAmount(new BigDecimal("150.50"));
     }
 
     @AfterEach
@@ -65,12 +70,13 @@ public class TransactionServiceTest {
 
     @Test
     void testCreateTransaction() {
+        Transaction transaction = modelMapper.map(transactionDTO, Transaction.class);
         when(transactionRepository.save(any(Transaction.class))).thenReturn(transaction);
 
-        Transaction createdTransaction = transactionService.save(transaction);
+        TransactionDTO createdTransactionDTO = transactionService.save(transactionDTO);
 
-        assertNotNull(createdTransaction, "Transaction creation failed, returned object is null.");
-        assertEquals(transaction.getStatus(), createdTransaction.getStatus());
+        assertNotNull(createdTransactionDTO, "Transaction creation failed, returned object is null.");
+        assertEquals(transactionDTO.getStatus(), createdTransactionDTO.getStatus());
         verify(transactionRepository, times(1)).save(any(Transaction.class));
     }
 
@@ -78,46 +84,49 @@ public class TransactionServiceTest {
     void testFindTransactionById_NotFound() {
         when(transactionRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<Transaction> foundTransaction = transactionService.findById(999L);
+        Optional<TransactionDTO> foundTransactionDTO = transactionService.findById(999L);
 
-        assertFalse(foundTransaction.isPresent(), "Transaction should not be found.");
+        assertFalse(foundTransactionDTO.isPresent(), "Transaction should not be found.");
         verify(transactionRepository, times(1)).findById(999L);
     }
 
     @Test
     void testFindTransactionById() {
-        when(transactionRepository.findById(transaction.getTransactionId())).thenReturn(Optional.of(transaction));
+        Transaction transaction = modelMapper.map(transactionDTO, Transaction.class);
+        when(transactionRepository.findById(transactionDTO.getTransactionId())).thenReturn(Optional.of(transaction));
 
-        Optional<Transaction> foundTransaction = transactionService.findById(transaction.getTransactionId());
+        Optional<TransactionDTO> foundTransactionDTO = transactionService.findById(transactionDTO.getTransactionId());
 
-        assertTrue(foundTransaction.isPresent(), "Transaction not found.");
-        assertEquals(transaction.getStatus(), foundTransaction.get().getStatus());
-        verify(transactionRepository, times(1)).findById(transaction.getTransactionId());
+        assertTrue(foundTransactionDTO.isPresent(), "Transaction not found.");
+        assertEquals(transactionDTO.getStatus(), foundTransactionDTO.get().getStatus());
+        verify(transactionRepository, times(1)).findById(transactionDTO.getTransactionId());
     }
 
     @Test
     void testUpdateTransaction() {
-        transaction.setStatus("UPDATED");
+        transactionDTO.setStatus("UPDATED");
+        Transaction updatedTransaction = modelMapper.map(transactionDTO, Transaction.class);
 
-        when(transactionRepository.save(any(Transaction.class))).thenReturn(transaction);
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(updatedTransaction);
 
-        Transaction updatedTransaction = transactionService.save(transaction);
+        TransactionDTO updatedTransactionDTO = transactionService.save(transactionDTO);
 
-        assertNotNull(updatedTransaction, "Transaction update failed, returned object is null.");
-        assertEquals("UPDATED", updatedTransaction.getStatus(), "Transaction status did not update correctly.");
-        verify(transactionRepository, times(1)).save(transaction);
+        assertNotNull(updatedTransactionDTO, "Transaction update failed, returned object is null.");
+        assertEquals("UPDATED", updatedTransactionDTO.getStatus(), "Transaction status did not update correctly.");
+        verify(transactionRepository, times(1)).save(any(Transaction.class));
     }
 
     @Test
     void testSoftDeleteTransaction() {
+        Transaction transaction = modelMapper.map(transactionDTO, Transaction.class);
         ArgumentCaptor<Transaction> captor = ArgumentCaptor.forClass(Transaction.class);
 
-        when(transactionRepository.findById(transaction.getTransactionId())).thenReturn(Optional.of(transaction));
+        when(transactionRepository.findById(transactionDTO.getTransactionId())).thenReturn(Optional.of(transaction));
         when(transactionRepository.save(any(Transaction.class))).thenReturn(transaction);
 
-        transactionService.softDelete(transaction.getTransactionId(), "testUser");
+        transactionService.softDelete(transactionDTO.getTransactionId(), "testUser");
 
-        verify(transactionRepository, times(1)).findById(transaction.getTransactionId());
+        verify(transactionRepository, times(1)).findById(transactionDTO.getTransactionId());
         verify(transactionRepository, times(1)).save(captor.capture());
 
         Transaction softDeletedTransaction = captor.getValue();
@@ -137,13 +146,14 @@ public class TransactionServiceTest {
 
     @Test
     void testFindAllTransactions() {
+        Transaction transaction = modelMapper.map(transactionDTO, Transaction.class);
         when(transactionRepository.findAll()).thenReturn(List.of(transaction));
 
-        List<Transaction> transactionList = transactionService.findAll();
+        List<TransactionDTO> transactionDTOList = transactionService.findAll();
 
-        assertNotNull(transactionList, "Transaction list is null.");
-        assertFalse(transactionList.isEmpty(), "Transaction list is empty.");
-        assertEquals(1, transactionList.size(), "Transaction list size mismatch.");
+        assertNotNull(transactionDTOList, "Transaction list is null.");
+        assertFalse(transactionDTOList.isEmpty(), "Transaction list is empty.");
+        assertEquals(1, transactionDTOList.size(), "Transaction list size mismatch.");
         verify(transactionRepository, times(1)).findAll();
     }
 
@@ -158,5 +168,6 @@ public class TransactionServiceTest {
         assertNotNull(transaction.getDeletedAt(), "Deleted transaction should have a non-null deletedAt field");
         assertEquals("testUser", transaction.getDeletedBy(), "DeletedBy should match the provided user");
     }
+
 
 }

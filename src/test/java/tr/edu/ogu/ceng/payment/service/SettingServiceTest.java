@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -13,7 +14,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.Setting;
+import tr.edu.ogu.ceng.payment.dto.SettingDTO;
+import tr.edu.ogu.ceng.payment.entity.Setting;
 import tr.edu.ogu.ceng.payment.repository.SettingRepository;
 
 import java.util.List;
@@ -39,16 +41,19 @@ public class SettingServiceTest {
     @Autowired
     private SettingService settingService;
 
-    private Setting setting;
+    @Autowired
+    private ModelMapper modelMapper;
+
+    private SettingDTO settingDTO;
 
     @BeforeEach
     void setUp() {
         reset(settingRepository);
 
-        setting = new Setting();
-        setting.setId(1L);
-        setting.setSettingKey("siteName");
-        setting.setSettingValue("My Application");
+        settingDTO = new SettingDTO();
+        settingDTO.setId(1L);
+        settingDTO.setSettingKey("siteName");
+        settingDTO.setSettingValue("My Application");
     }
 
     @AfterEach
@@ -60,12 +65,13 @@ public class SettingServiceTest {
 
     @Test
     void testCreateSetting() {
+        Setting setting = modelMapper.map(settingDTO, Setting.class);
         when(settingRepository.save(any(Setting.class))).thenReturn(setting);
 
-        Setting createdSetting = settingService.save(setting);
+        SettingDTO createdSettingDTO = settingService.save(settingDTO);
 
-        assertNotNull(createdSetting, "Setting creation failed, returned object is null.");
-        assertEquals(setting.getSettingKey(), createdSetting.getSettingKey());
+        assertNotNull(createdSettingDTO, "Setting creation failed, returned object is null.");
+        assertEquals(settingDTO.getSettingKey(), createdSettingDTO.getSettingKey());
         verify(settingRepository, times(1)).save(any(Setting.class));
     }
 
@@ -73,57 +79,61 @@ public class SettingServiceTest {
     void testFindSettingById_NotFound() {
         when(settingRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<Setting> foundSetting = settingService.findById(999L);
+        Optional<SettingDTO> foundSettingDTO = settingService.findById(999L);
 
-        assertFalse(foundSetting.isPresent(), "Setting should not be found.");
+        assertFalse(foundSettingDTO.isPresent(), "Setting should not be found.");
         verify(settingRepository, times(1)).findById(999L);
     }
 
     @Test
     void testFindSettingById() {
-        when(settingRepository.findById(setting.getId())).thenReturn(Optional.of(setting));
+        Setting setting = modelMapper.map(settingDTO, Setting.class);
+        when(settingRepository.findById(settingDTO.getId())).thenReturn(Optional.of(setting));
 
-        Optional<Setting> foundSetting = settingService.findById(setting.getId());
+        Optional<SettingDTO> foundSettingDTO = settingService.findById(settingDTO.getId());
 
-        assertTrue(foundSetting.isPresent(), "Setting not found.");
-        assertEquals(setting.getSettingKey(), foundSetting.get().getSettingKey());
-        verify(settingRepository, times(1)).findById(setting.getId());
+        assertTrue(foundSettingDTO.isPresent(), "Setting not found.");
+        assertEquals(settingDTO.getSettingKey(), foundSettingDTO.get().getSettingKey());
+        verify(settingRepository, times(1)).findById(settingDTO.getId());
     }
 
     @Test
     void testUpdateSetting() {
-        setting.setSettingValue("Updated Application Name");
+        settingDTO.setSettingValue("Updated Application Name");
+        Setting updatedSetting = modelMapper.map(settingDTO, Setting.class);
 
-        when(settingRepository.save(any(Setting.class))).thenReturn(setting);
+        when(settingRepository.save(any(Setting.class))).thenReturn(updatedSetting);
 
-        Setting updatedSetting = settingService.save(setting);
+        SettingDTO updatedSettingDTO = settingService.save(settingDTO);
 
-        assertNotNull(updatedSetting, "Setting update failed, returned object is null.");
-        assertEquals("Updated Application Name", updatedSetting.getSettingValue(), "Setting value did not update correctly.");
-        verify(settingRepository, times(1)).save(setting);
+        assertNotNull(updatedSettingDTO, "Setting update failed, returned object is null.");
+        assertEquals("Updated Application Name", updatedSettingDTO.getSettingValue(), "Setting value did not update correctly.");
+        verify(settingRepository, times(1)).save(any(Setting.class));
     }
 
     @Test
     void testFindSettingBySettingKey() {
-        when(settingRepository.findBySettingKey(setting.getSettingKey())).thenReturn(setting);
+        Setting setting = modelMapper.map(settingDTO, Setting.class);
+        when(settingRepository.findBySettingKey(settingDTO.getSettingKey())).thenReturn(setting);
 
-        Setting foundSetting = settingService.findBySettingKey(setting.getSettingKey());
+        SettingDTO foundSettingDTO = settingService.findBySettingKey(settingDTO.getSettingKey());
 
-        assertNotNull(foundSetting, "Setting not found by key.");
-        assertEquals(setting.getSettingKey(), foundSetting.getSettingKey());
-        verify(settingRepository, times(1)).findBySettingKey(setting.getSettingKey());
+        assertNotNull(foundSettingDTO, "Setting not found by key.");
+        assertEquals(settingDTO.getSettingKey(), foundSettingDTO.getSettingKey());
+        verify(settingRepository, times(1)).findBySettingKey(settingDTO.getSettingKey());
     }
 
     @Test
     void testSoftDeleteSetting() {
+        Setting setting = modelMapper.map(settingDTO, Setting.class);
         ArgumentCaptor<Setting> captor = ArgumentCaptor.forClass(Setting.class);
 
-        when(settingRepository.findById(setting.getId())).thenReturn(Optional.of(setting));
+        when(settingRepository.findById(settingDTO.getId())).thenReturn(Optional.of(setting));
         when(settingRepository.save(any(Setting.class))).thenReturn(setting);
 
-        settingService.softDelete(setting.getId(), "testUser");
+        settingService.softDelete(settingDTO.getId(), "testUser");
 
-        verify(settingRepository, times(1)).findById(setting.getId());
+        verify(settingRepository, times(1)).findById(settingDTO.getId());
         verify(settingRepository, times(1)).save(captor.capture());
 
         Setting softDeletedSetting = captor.getValue();
@@ -143,13 +153,14 @@ public class SettingServiceTest {
 
     @Test
     void testFindAllSettings() {
+        Setting setting = modelMapper.map(settingDTO, Setting.class);
         when(settingRepository.findAll()).thenReturn(List.of(setting));
 
-        List<Setting> settingList = settingService.findAll();
+        List<SettingDTO> settingDTOList = settingService.findAll();
 
-        assertNotNull(settingList, "Setting list is null.");
-        assertFalse(settingList.isEmpty(), "Setting list is empty.");
-        assertEquals(1, settingList.size(), "Setting list size mismatch.");
+        assertNotNull(settingDTOList, "Setting list is null.");
+        assertFalse(settingDTOList.isEmpty(), "Setting list is empty.");
+        assertEquals(1, settingDTOList.size(), "Setting list size mismatch.");
         verify(settingRepository, times(1)).findAll();
     }
 
@@ -159,10 +170,11 @@ public class SettingServiceTest {
         setting.setSettingKey("currency");
         when(settingRepository.findBySettingKey("currency")).thenReturn(setting);
 
-        Setting result = settingService.findBySettingKey("currency");
+        SettingDTO result = settingService.findBySettingKey("currency");
 
         assertNotNull(result, "Setting should not be null when found by key");
         assertEquals("currency", result.getSettingKey(), "Setting key should match");
     }
+
 
 }

@@ -4,7 +4,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class ErrorLogDTO {
+public class ErrorLogDTO extends BaseDTO {
     private Long errorId;
     private String errorMessage;
     private String stackTrace;

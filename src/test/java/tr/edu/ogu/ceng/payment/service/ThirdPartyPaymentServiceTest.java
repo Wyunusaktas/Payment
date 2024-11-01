@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -13,7 +14,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.ThirdPartyPayment;
+import tr.edu.ogu.ceng.payment.dto.ThirdPartyPaymentDTO;
+import tr.edu.ogu.ceng.payment.entity.ThirdPartyPayment;
 import tr.edu.ogu.ceng.payment.repository.ThirdPartyPaymentRepository;
 
 import java.time.LocalDateTime;
@@ -40,18 +42,21 @@ public class ThirdPartyPaymentServiceTest {
     @Autowired
     private ThirdPartyPaymentService thirdPartyPaymentService;
 
-    private ThirdPartyPayment thirdPartyPayment;
+    @Autowired
+    private ModelMapper modelMapper;
+
+    private ThirdPartyPaymentDTO thirdPartyPaymentDTO;
 
     @BeforeEach
     void setUp() {
         reset(thirdPartyPaymentRepository);
 
-        thirdPartyPayment = new ThirdPartyPayment();
-        thirdPartyPayment.setThirdPartyPaymentId(1L);
-        thirdPartyPayment.setProvider("Provider A");
-        thirdPartyPayment.setTransactionReference("TXN12345");
-        thirdPartyPayment.setStatus("COMPLETED");
-        thirdPartyPayment.setProcessedAt(LocalDateTime.now());
+        thirdPartyPaymentDTO = new ThirdPartyPaymentDTO();
+        thirdPartyPaymentDTO.setThirdPartyPaymentId(1L);
+        thirdPartyPaymentDTO.setProvider("Provider A");
+        thirdPartyPaymentDTO.setTransactionReference("TXN12345");
+        thirdPartyPaymentDTO.setStatus("COMPLETED");
+        thirdPartyPaymentDTO.setProcessedAt(LocalDateTime.now());
     }
 
     @AfterEach
@@ -63,12 +68,13 @@ public class ThirdPartyPaymentServiceTest {
 
     @Test
     void testCreateThirdPartyPayment() {
+        ThirdPartyPayment thirdPartyPayment = modelMapper.map(thirdPartyPaymentDTO, ThirdPartyPayment.class);
         when(thirdPartyPaymentRepository.save(any(ThirdPartyPayment.class))).thenReturn(thirdPartyPayment);
 
-        ThirdPartyPayment createdThirdPartyPayment = thirdPartyPaymentService.save(thirdPartyPayment);
+        ThirdPartyPaymentDTO createdThirdPartyPaymentDTO = thirdPartyPaymentService.save(thirdPartyPaymentDTO);
 
-        assertNotNull(createdThirdPartyPayment, "ThirdPartyPayment creation failed, returned object is null.");
-        assertEquals(thirdPartyPayment.getProvider(), createdThirdPartyPayment.getProvider());
+        assertNotNull(createdThirdPartyPaymentDTO, "ThirdPartyPayment creation failed, returned object is null.");
+        assertEquals(thirdPartyPaymentDTO.getProvider(), createdThirdPartyPaymentDTO.getProvider());
         verify(thirdPartyPaymentRepository, times(1)).save(any(ThirdPartyPayment.class));
     }
 
@@ -76,46 +82,49 @@ public class ThirdPartyPaymentServiceTest {
     void testFindThirdPartyPaymentById_NotFound() {
         when(thirdPartyPaymentRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<ThirdPartyPayment> foundThirdPartyPayment = thirdPartyPaymentService.findById(999L);
+        Optional<ThirdPartyPaymentDTO> foundThirdPartyPaymentDTO = thirdPartyPaymentService.findById(999L);
 
-        assertFalse(foundThirdPartyPayment.isPresent(), "ThirdPartyPayment should not be found.");
+        assertFalse(foundThirdPartyPaymentDTO.isPresent(), "ThirdPartyPayment should not be found.");
         verify(thirdPartyPaymentRepository, times(1)).findById(999L);
     }
 
     @Test
     void testFindThirdPartyPaymentById() {
-        when(thirdPartyPaymentRepository.findById(thirdPartyPayment.getThirdPartyPaymentId())).thenReturn(Optional.of(thirdPartyPayment));
+        ThirdPartyPayment thirdPartyPayment = modelMapper.map(thirdPartyPaymentDTO, ThirdPartyPayment.class);
+        when(thirdPartyPaymentRepository.findById(thirdPartyPaymentDTO.getThirdPartyPaymentId())).thenReturn(Optional.of(thirdPartyPayment));
 
-        Optional<ThirdPartyPayment> foundThirdPartyPayment = thirdPartyPaymentService.findById(thirdPartyPayment.getThirdPartyPaymentId());
+        Optional<ThirdPartyPaymentDTO> foundThirdPartyPaymentDTO = thirdPartyPaymentService.findById(thirdPartyPaymentDTO.getThirdPartyPaymentId());
 
-        assertTrue(foundThirdPartyPayment.isPresent(), "ThirdPartyPayment not found.");
-        assertEquals(thirdPartyPayment.getProvider(), foundThirdPartyPayment.get().getProvider());
-        verify(thirdPartyPaymentRepository, times(1)).findById(thirdPartyPayment.getThirdPartyPaymentId());
+        assertTrue(foundThirdPartyPaymentDTO.isPresent(), "ThirdPartyPayment not found.");
+        assertEquals(thirdPartyPaymentDTO.getProvider(), foundThirdPartyPaymentDTO.get().getProvider());
+        verify(thirdPartyPaymentRepository, times(1)).findById(thirdPartyPaymentDTO.getThirdPartyPaymentId());
     }
 
     @Test
     void testUpdateThirdPartyPayment() {
-        thirdPartyPayment.setStatus("UPDATED");
+        thirdPartyPaymentDTO.setStatus("UPDATED");
+        ThirdPartyPayment updatedThirdPartyPayment = modelMapper.map(thirdPartyPaymentDTO, ThirdPartyPayment.class);
 
-        when(thirdPartyPaymentRepository.save(any(ThirdPartyPayment.class))).thenReturn(thirdPartyPayment);
+        when(thirdPartyPaymentRepository.save(any(ThirdPartyPayment.class))).thenReturn(updatedThirdPartyPayment);
 
-        ThirdPartyPayment updatedThirdPartyPayment = thirdPartyPaymentService.save(thirdPartyPayment);
+        ThirdPartyPaymentDTO updatedThirdPartyPaymentDTO = thirdPartyPaymentService.save(thirdPartyPaymentDTO);
 
-        assertNotNull(updatedThirdPartyPayment, "ThirdPartyPayment update failed, returned object is null.");
-        assertEquals("UPDATED", updatedThirdPartyPayment.getStatus(), "ThirdPartyPayment status did not update correctly.");
-        verify(thirdPartyPaymentRepository, times(1)).save(thirdPartyPayment);
+        assertNotNull(updatedThirdPartyPaymentDTO, "ThirdPartyPayment update failed, returned object is null.");
+        assertEquals("UPDATED", updatedThirdPartyPaymentDTO.getStatus(), "ThirdPartyPayment status did not update correctly.");
+        verify(thirdPartyPaymentRepository, times(1)).save(any(ThirdPartyPayment.class));
     }
 
     @Test
     void testSoftDeleteThirdPartyPayment() {
+        ThirdPartyPayment thirdPartyPayment = modelMapper.map(thirdPartyPaymentDTO, ThirdPartyPayment.class);
         ArgumentCaptor<ThirdPartyPayment> captor = ArgumentCaptor.forClass(ThirdPartyPayment.class);
 
-        when(thirdPartyPaymentRepository.findById(thirdPartyPayment.getThirdPartyPaymentId())).thenReturn(Optional.of(thirdPartyPayment));
+        when(thirdPartyPaymentRepository.findById(thirdPartyPaymentDTO.getThirdPartyPaymentId())).thenReturn(Optional.of(thirdPartyPayment));
         when(thirdPartyPaymentRepository.save(any(ThirdPartyPayment.class))).thenReturn(thirdPartyPayment);
 
-        thirdPartyPaymentService.softDelete(thirdPartyPayment.getThirdPartyPaymentId(), "testUser");
+        thirdPartyPaymentService.softDelete(thirdPartyPaymentDTO.getThirdPartyPaymentId(), "testUser");
 
-        verify(thirdPartyPaymentRepository, times(1)).findById(thirdPartyPayment.getThirdPartyPaymentId());
+        verify(thirdPartyPaymentRepository, times(1)).findById(thirdPartyPaymentDTO.getThirdPartyPaymentId());
         verify(thirdPartyPaymentRepository, times(1)).save(captor.capture());
 
         ThirdPartyPayment softDeletedThirdPartyPayment = captor.getValue();
@@ -135,13 +144,14 @@ public class ThirdPartyPaymentServiceTest {
 
     @Test
     void testFindAllThirdPartyPayments() {
+        ThirdPartyPayment thirdPartyPayment = modelMapper.map(thirdPartyPaymentDTO, ThirdPartyPayment.class);
         when(thirdPartyPaymentRepository.findAll()).thenReturn(List.of(thirdPartyPayment));
 
-        List<ThirdPartyPayment> thirdPartyPaymentList = thirdPartyPaymentService.findAll();
+        List<ThirdPartyPaymentDTO> thirdPartyPaymentDTOList = thirdPartyPaymentService.findAll();
 
-        assertNotNull(thirdPartyPaymentList, "ThirdPartyPayment list is null.");
-        assertFalse(thirdPartyPaymentList.isEmpty(), "ThirdPartyPayment list is empty.");
-        assertEquals(1, thirdPartyPaymentList.size(), "ThirdPartyPayment list size mismatch.");
+        assertNotNull(thirdPartyPaymentDTOList, "ThirdPartyPayment list is null.");
+        assertFalse(thirdPartyPaymentDTOList.isEmpty(), "ThirdPartyPayment list is empty.");
+        assertEquals(1, thirdPartyPaymentDTOList.size(), "ThirdPartyPayment list size mismatch.");
         verify(thirdPartyPaymentRepository, times(1)).findAll();
     }
 
@@ -151,10 +161,13 @@ public class ThirdPartyPaymentServiceTest {
         payment.setProvider("PayPal");
         when(thirdPartyPaymentRepository.save(any(ThirdPartyPayment.class))).thenReturn(payment);
 
-        ThirdPartyPayment result = thirdPartyPaymentService.save(payment);
+        ThirdPartyPaymentDTO paymentDTO = modelMapper.map(payment, ThirdPartyPaymentDTO.class);
+        ThirdPartyPaymentDTO result = thirdPartyPaymentService.save(paymentDTO);
 
         assertNotNull(result, "Saved third-party payment should not be null");
         assertEquals("PayPal", result.getProvider(), "Provider should match");
     }
+
+
 
 }

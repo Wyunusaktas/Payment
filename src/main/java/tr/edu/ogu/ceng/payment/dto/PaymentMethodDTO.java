@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
-public class PaymentMethodDTO {
+public class PaymentMethodDTO extends BaseDTO {
     private Long methodId;
     private UUID userId;
     private String type;

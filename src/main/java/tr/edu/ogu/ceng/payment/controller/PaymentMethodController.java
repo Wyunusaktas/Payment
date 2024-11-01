@@ -2,7 +2,7 @@ package tr.edu.ogu.ceng.payment.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import tr.edu.ogu.ceng.payment.model.PaymentMethod;
+import tr.edu.ogu.ceng.payment.dto.PaymentMethodDTO;
 import tr.edu.ogu.ceng.payment.service.PaymentMethodService;
 
 import java.util.List;
@@ -16,27 +16,26 @@ public class PaymentMethodController {
     private final PaymentMethodService paymentMethodService;
 
     @GetMapping
-    public List<PaymentMethod> getAllPaymentMethods() {
+    public List<PaymentMethodDTO> getAllPaymentMethods() {
         return paymentMethodService.findAll();
     }
 
     @GetMapping("/{id}")
-    public Optional<PaymentMethod> getPaymentMethod(@PathVariable Long id) {
+    public Optional<PaymentMethodDTO> getPaymentMethod(@PathVariable Long id) {
         return paymentMethodService.findById(id);
     }
 
     @PostMapping
-    public PaymentMethod createPaymentMethod(@RequestBody PaymentMethod paymentMethod) {
-        return paymentMethodService.save(paymentMethod);
+    public PaymentMethodDTO createPaymentMethod(@RequestBody PaymentMethodDTO paymentMethodDTO) {
+        return paymentMethodService.save(paymentMethodDTO);
     }
 
     @PutMapping("/{id}")
-    public PaymentMethod updatePaymentMethod(@PathVariable Long id, @RequestBody PaymentMethod paymentMethod) {
-        paymentMethod.setMethodId(id);  // ID'yi ayarla
-        return paymentMethodService.save(paymentMethod);
+    public PaymentMethodDTO updatePaymentMethod(@PathVariable Long id, @RequestBody PaymentMethodDTO paymentMethodDTO) {
+        paymentMethodDTO.setMethodId(id);  // ID'yi ayarla
+        return paymentMethodService.save(paymentMethodDTO);
     }
 
-    // Soft delete işlemi için güncellenmiş endpoint
     @DeleteMapping("/{id}")
     public void softDeletePaymentMethod(@PathVariable Long id) {
         paymentMethodService.softDelete(id, "system"); // "system" yerine geçerli kullanıcı bilgisi eklenebilir

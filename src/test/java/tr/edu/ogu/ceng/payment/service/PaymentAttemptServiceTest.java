@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -13,7 +14,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.PaymentAttempt;
+import tr.edu.ogu.ceng.payment.dto.PaymentAttemptDTO;
+import tr.edu.ogu.ceng.payment.entity.PaymentAttempt;
 import tr.edu.ogu.ceng.payment.repository.PaymentAttemptRepository;
 
 import java.math.BigDecimal;
@@ -42,7 +44,11 @@ public class PaymentAttemptServiceTest {
     @Autowired
     private PaymentAttemptService paymentAttemptService;
 
+    @Autowired
+    private ModelMapper modelMapper;
+
     private PaymentAttempt paymentAttempt;
+    private PaymentAttemptDTO paymentAttemptDTO;
 
     @BeforeEach
     void setUp() {
@@ -55,6 +61,8 @@ public class PaymentAttemptServiceTest {
         paymentAttempt.setAttemptStatus("SUCCESS");
         paymentAttempt.setAttemptDate(LocalDateTime.now());
         paymentAttempt.setErrorMessage(null);
+
+        paymentAttemptDTO = modelMapper.map(paymentAttempt, PaymentAttemptDTO.class);
     }
 
     @AfterEach
@@ -68,10 +76,10 @@ public class PaymentAttemptServiceTest {
     void testCreatePaymentAttempt() {
         when(paymentAttemptRepository.save(any(PaymentAttempt.class))).thenReturn(paymentAttempt);
 
-        PaymentAttempt createdAttempt = paymentAttemptService.save(paymentAttempt);
+        PaymentAttemptDTO createdAttemptDTO = paymentAttemptService.save(paymentAttemptDTO);
 
-        assertNotNull(createdAttempt, "PaymentAttempt creation failed, returned object is null.");
-        assertEquals(paymentAttempt.getAttemptId(), createdAttempt.getAttemptId());
+        assertNotNull(createdAttemptDTO, "PaymentAttempt creation failed, returned object is null.");
+        assertEquals(paymentAttemptDTO.getAttemptId(), createdAttemptDTO.getAttemptId());
         verify(paymentAttemptRepository, times(1)).save(any(PaymentAttempt.class));
     }
 
@@ -79,9 +87,9 @@ public class PaymentAttemptServiceTest {
     void testFindPaymentAttemptById_NotFound() {
         when(paymentAttemptRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<PaymentAttempt> foundAttempt = paymentAttemptService.findById(999L);
+        Optional<PaymentAttemptDTO> foundAttemptDTO = paymentAttemptService.findById(999L);
 
-        assertFalse(foundAttempt.isPresent(), "PaymentAttempt should not be found.");
+        assertFalse(foundAttemptDTO.isPresent(), "PaymentAttempt should not be found.");
         verify(paymentAttemptRepository, times(1)).findById(999L);
     }
 
@@ -89,25 +97,29 @@ public class PaymentAttemptServiceTest {
     void testFindPaymentAttemptById() {
         when(paymentAttemptRepository.findById(paymentAttempt.getAttemptId())).thenReturn(Optional.of(paymentAttempt));
 
-        Optional<PaymentAttempt> foundAttempt = paymentAttemptService.findById(paymentAttempt.getAttemptId());
+        Optional<PaymentAttemptDTO> foundAttemptDTO = paymentAttemptService.findById(paymentAttemptDTO.getAttemptId());
 
-        assertTrue(foundAttempt.isPresent(), "PaymentAttempt not found.");
-        assertEquals(paymentAttempt.getAttemptId(), foundAttempt.get().getAttemptId());
-        verify(paymentAttemptRepository, times(1)).findById(paymentAttempt.getAttemptId());
+        assertTrue(foundAttemptDTO.isPresent(), "PaymentAttempt not found.");
+        assertEquals(paymentAttemptDTO.getAttemptId(), foundAttemptDTO.get().getAttemptId());
+        verify(paymentAttemptRepository, times(1)).findById(paymentAttemptDTO.getAttemptId());
     }
 
     @Test
     void testUpdatePaymentAttempt() {
-        paymentAttempt.setAttemptStatus("FAILED");
+        paymentAttemptDTO.setAttemptStatus("FAILED");
 
-        when(paymentAttemptRepository.save(any(PaymentAttempt.class))).thenReturn(paymentAttempt);
+        // paymentAttemptDTO'yu paymentAttempt'a mapleyin
+        PaymentAttempt updatedPaymentAttempt = modelMapper.map(paymentAttemptDTO, PaymentAttempt.class);
 
-        PaymentAttempt updatedAttempt = paymentAttemptService.save(paymentAttempt);
+        when(paymentAttemptRepository.save(any(PaymentAttempt.class))).thenReturn(updatedPaymentAttempt);
 
-        assertNotNull(updatedAttempt, "PaymentAttempt update failed, returned object is null.");
-        assertEquals("FAILED", updatedAttempt.getAttemptStatus(), "Attempt status did not update correctly.");
-        verify(paymentAttemptRepository, times(1)).save(paymentAttempt);
+        PaymentAttemptDTO updatedAttemptDTO = paymentAttemptService.save(paymentAttemptDTO);
+
+        assertNotNull(updatedAttemptDTO, "PaymentAttempt update failed, returned object is null.");
+        assertEquals("FAILED", updatedAttemptDTO.getAttemptStatus(), "Attempt status did not update correctly.");
+        verify(paymentAttemptRepository, times(1)).save(any(PaymentAttempt.class));
     }
+
 
     @Test
     void testSoftDeletePaymentAttempt() {
@@ -116,9 +128,9 @@ public class PaymentAttemptServiceTest {
         when(paymentAttemptRepository.findById(paymentAttempt.getAttemptId())).thenReturn(Optional.of(paymentAttempt));
         when(paymentAttemptRepository.save(any(PaymentAttempt.class))).thenReturn(paymentAttempt);
 
-        paymentAttemptService.softDelete(paymentAttempt.getAttemptId(), "testUser");
+        paymentAttemptService.softDelete(paymentAttemptDTO.getAttemptId(), "testUser");
 
-        verify(paymentAttemptRepository, times(1)).findById(paymentAttempt.getAttemptId());
+        verify(paymentAttemptRepository, times(1)).findById(paymentAttemptDTO.getAttemptId());
         verify(paymentAttemptRepository, times(1)).save(captor.capture());
 
         PaymentAttempt softDeletedAttempt = captor.getValue();
@@ -140,24 +152,29 @@ public class PaymentAttemptServiceTest {
     void testFindAllPaymentAttempts() {
         when(paymentAttemptRepository.findAll()).thenReturn(List.of(paymentAttempt));
 
-        List<PaymentAttempt> attemptsList = paymentAttemptService.findAll();
+        List<PaymentAttemptDTO> attemptsDTOList = paymentAttemptService.findAll();
 
-        assertNotNull(attemptsList, "PaymentAttempt list is null.");
-        assertFalse(attemptsList.isEmpty(), "PaymentAttempt list is empty.");
-        assertEquals(1, attemptsList.size(), "PaymentAttempt list size mismatch.");
+        assertNotNull(attemptsDTOList, "PaymentAttempt list is null.");
+        assertFalse(attemptsDTOList.isEmpty(), "PaymentAttempt list is empty.");
+        assertEquals(1, attemptsDTOList.size(), "PaymentAttempt list size mismatch.");
         verify(paymentAttemptRepository, times(1)).findAll();
     }
 
     @Test
-    void testSoftDeleteUpdatesDeletedAtInPaymentAttempt() {
-        Long attemptId = 1L;
-        PaymentAttempt attempt = new PaymentAttempt();
-        when(paymentAttemptRepository.findById(attemptId)).thenReturn(Optional.of(attempt));
+    void testSavePaymentAttemptWithValidAmount() {
+        paymentAttemptDTO.setAmount(BigDecimal.valueOf(250.0));
 
-        paymentAttemptService.softDelete(attemptId, "testUser");
+        // DTO'yu model nesnesine dönüştürün
+        PaymentAttempt updatedPaymentAttempt = modelMapper.map(paymentAttemptDTO, PaymentAttempt.class);
 
-        assertNotNull(attempt.getDeletedAt(), "Deleted attempt should have a non-null deletedAt field");
-        assertEquals("testUser", attempt.getDeletedBy(), "DeletedBy should match the provided user");
+        when(paymentAttemptRepository.save(any(PaymentAttempt.class))).thenReturn(updatedPaymentAttempt);
+
+        PaymentAttemptDTO result = paymentAttemptService.save(paymentAttemptDTO);
+
+        assertNotNull(result, "Saved PaymentAttemptDTO should not be null");
+        assertEquals(BigDecimal.valueOf(250.0), result.getAmount(), "Amount should match the provided value");
     }
+
+
 
 }

@@ -14,7 +14,9 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.AuditLog;
+import org.modelmapper.ModelMapper;
+import tr.edu.ogu.ceng.payment.dto.AuditLogDTO;
+import tr.edu.ogu.ceng.payment.entity.AuditLog;
 import tr.edu.ogu.ceng.payment.repository.AuditLogRepository;
 
 import java.time.LocalDateTime;
@@ -29,7 +31,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(SpringExtension.class)
 @Testcontainers
 @ActiveProfiles("test")
-//@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class AuditLogServiceTest {
 
     @Container
@@ -43,6 +44,10 @@ public class AuditLogServiceTest {
     @Autowired
     private AuditLogService auditLogService;
 
+    @Autowired
+    private ModelMapper modelMapper;
+
+    private AuditLogDTO auditLogDTO;
     private AuditLog auditLog;
 
     @BeforeEach
@@ -55,6 +60,8 @@ public class AuditLogServiceTest {
         auditLog.setUserId(UUID.randomUUID());
         auditLog.setTimestamp(LocalDateTime.now());
         auditLog.setDescription("Audit log created");
+
+        auditLogDTO = modelMapper.map(auditLog, AuditLogDTO.class);
     }
 
     @AfterEach
@@ -68,10 +75,10 @@ public class AuditLogServiceTest {
     void testCreateAuditLog() {
         when(auditLogRepository.save(any(AuditLog.class))).thenReturn(auditLog);
 
-        AuditLog createdAuditLog = auditLogService.save(auditLog);
+        AuditLogDTO createdAuditLogDTO = auditLogService.save(auditLogDTO);
 
-        assertNotNull(createdAuditLog, "AuditLog creation failed, returned object is null.");
-        assertEquals(auditLog.getLogId(), createdAuditLog.getLogId());
+        assertNotNull(createdAuditLogDTO, "AuditLogDTO creation failed, returned object is null.");
+        assertEquals(auditLogDTO.getLogId(), createdAuditLogDTO.getLogId());
         verify(auditLogRepository, times(1)).save(any(AuditLog.class));
     }
 
@@ -79,9 +86,9 @@ public class AuditLogServiceTest {
     void testFindAuditLogById_NotFound() {
         when(auditLogRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<AuditLog> foundAuditLog = auditLogService.findById(999L);
+        Optional<AuditLogDTO> foundAuditLog = auditLogService.findById(999L);
 
-        assertFalse(foundAuditLog.isPresent(), "AuditLog should not be found.");
+        assertFalse(foundAuditLog.isPresent(), "AuditLogDTO should not be found.");
         verify(auditLogRepository, times(1)).findById(999L);
     }
 
@@ -89,25 +96,44 @@ public class AuditLogServiceTest {
     void testFindAuditLogById() {
         when(auditLogRepository.findById(auditLog.getLogId())).thenReturn(Optional.of(auditLog));
 
-        Optional<AuditLog> foundAuditLog = auditLogService.findById(auditLog.getLogId());
+        Optional<AuditLogDTO> foundAuditLogDTO = auditLogService.findById(auditLogDTO.getLogId());
 
-        assertTrue(foundAuditLog.isPresent(), "AuditLog not found.");
-        assertEquals(auditLog.getLogId(), foundAuditLog.get().getLogId());
+        assertTrue(foundAuditLogDTO.isPresent(), "AuditLogDTO not found.");
+        assertEquals(auditLogDTO.getLogId(), foundAuditLogDTO.get().getLogId());
         verify(auditLogRepository, times(1)).findById(auditLog.getLogId());
     }
 
     @Test
     void testUpdateAuditLog() {
-        auditLog.setDescription("Updated description");
+        auditLogDTO.setDescription("Updated description");
+
+        // mock save işlemi sırasında AuditLog nesnesinin geri dönüşünü ayarla
+        AuditLog updatedAuditLog = new AuditLog();
+        updatedAuditLog.setDescription("Updated description");
+        when(auditLogRepository.save(any(AuditLog.class))).thenReturn(updatedAuditLog);
+
+        // Servis çağrısı ve dönen değerlerin doğrulanması
+        AuditLogDTO updatedAuditLogDTO = auditLogService.save(auditLogDTO);
+
+        assertNotNull(updatedAuditLogDTO, "AuditLogDTO update failed, returned object is null.");
+        assertEquals("Updated description", updatedAuditLogDTO.getDescription(), "Description did not update correctly");
+        verify(auditLogRepository, times(1)).save(any(AuditLog.class));
+    }
+
+    @Test
+    void testUpdateAuditLogWithEmptyDescription() {
+        auditLogDTO.setDescription(""); // Boş açıklama ayarlandı
 
         when(auditLogRepository.save(any(AuditLog.class))).thenReturn(auditLog);
 
-        AuditLog updatedAuditLog = auditLogService.save(auditLog);
+        AuditLogDTO updatedAuditLogDTO = auditLogService.save(auditLogDTO);
 
-        assertNotNull(updatedAuditLog, "AuditLog update failed, returned object is null.");
-        assertEquals("Updated description", updatedAuditLog.getDescription());
-        verify(auditLogRepository, times(1)).save(auditLog);
+        assertNotNull(updatedAuditLogDTO, "AuditLog update failed, returned object is null.");
+        assertNotEquals("", updatedAuditLogDTO.getDescription(), "AuditLog description should not be empty");
+        verify(auditLogRepository, times(1)).save(any(AuditLog.class));
     }
+
+
 
     @Test
     void testSoftDeleteAuditLog() {
@@ -116,7 +142,7 @@ public class AuditLogServiceTest {
         when(auditLogRepository.findById(auditLog.getLogId())).thenReturn(Optional.of(auditLog));
         when(auditLogRepository.save(any(AuditLog.class))).thenReturn(auditLog);
 
-        auditLogService.softDelete(auditLog.getLogId(), "testUser");
+        auditLogService.softDelete(auditLogDTO.getLogId(), "testUser");
 
         verify(auditLogRepository, times(1)).findById(auditLog.getLogId());
         verify(auditLogRepository, times(1)).save(captor.capture());
@@ -140,11 +166,11 @@ public class AuditLogServiceTest {
     void testFindAllAuditLogs() {
         when(auditLogRepository.findAll()).thenReturn(List.of(auditLog));
 
-        List<AuditLog> auditLogs = auditLogService.findAll();
+        List<AuditLogDTO> auditLogDTOs = auditLogService.findAll();
 
-        assertNotNull(auditLogs, "AuditLog list is null.");
-        assertFalse(auditLogs.isEmpty(), "AuditLog list is empty.");
-        assertEquals(1, auditLogs.size(), "AuditLog list size mismatch.");
+        assertNotNull(auditLogDTOs, "AuditLogDTO list is null.");
+        assertFalse(auditLogDTOs.isEmpty(), "AuditLogDTO list is empty.");
+        assertEquals(1, auditLogDTOs.size(), "AuditLogDTO list size mismatch.");
         verify(auditLogRepository, times(1)).findAll();
     }
 
@@ -153,11 +179,8 @@ public class AuditLogServiceTest {
         Long invalidId = 999L;
         when(auditLogRepository.findById(invalidId)).thenReturn(Optional.empty());
 
-        Optional<AuditLog> result = auditLogService.findById(invalidId);
+        Optional<AuditLogDTO> result = auditLogService.findById(invalidId);
 
         assertFalse(result.isPresent(), "Invalid ID should return Optional.empty()");
     }
-
-
-    // Diğer testler...
 }

@@ -2,7 +2,7 @@ package tr.edu.ogu.ceng.payment.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import tr.edu.ogu.ceng.payment.model.Chargeback;
+import tr.edu.ogu.ceng.payment.dto.ChargebackDTO;
 import tr.edu.ogu.ceng.payment.service.ChargebackService;
 
 import java.util.List;
@@ -16,28 +16,28 @@ public class ChargebackController {
     private final ChargebackService chargebackService;
 
     @GetMapping
-    public List<Chargeback> getAllChargebacks() {
+    public List<ChargebackDTO> getAllChargebacks() {
         return chargebackService.findAll();
     }
 
     @GetMapping("/{id}")
-    public Optional<Chargeback> getChargeback(@PathVariable Long id) {
+    public Optional<ChargebackDTO> getChargeback(@PathVariable Long id) {
         return chargebackService.findById(id);
     }
 
     @PostMapping
-    public Chargeback createChargeback(@RequestBody Chargeback chargeback) {
-        return chargebackService.save(chargeback);
+    public ChargebackDTO createChargeback(@RequestBody ChargebackDTO chargebackDTO) {
+        return chargebackService.save(chargebackDTO);
     }
 
     @PutMapping("/{id}")
-    public Chargeback updateChargeback(@PathVariable Long id, @RequestBody Chargeback chargeback) {
-        chargeback.setChargebackId(id);  // ID'yi set et
-        return chargebackService.save(chargeback);
+    public ChargebackDTO updateChargeback(@PathVariable Long id, @RequestBody ChargebackDTO chargebackDTO) {
+        chargebackDTO.setChargebackId(id);  // ID'yi ayarla
+        return chargebackService.save(chargebackDTO);
     }
 
     @DeleteMapping("/{id}")
     public void softDeleteChargeback(@PathVariable Long id) {
-        chargebackService.softDelete(id, "system"); // "system" yerine kullanıcı bilgisi eklenebilir
+        chargebackService.softDelete(id, "system"); // "system" yerine geçerli kullanıcı bilgisi eklenebilir
     }
 }

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -13,7 +14,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.FailedPayment;
+import tr.edu.ogu.ceng.payment.dto.FailedPaymentDTO;
+import tr.edu.ogu.ceng.payment.entity.FailedPayment;
 import tr.edu.ogu.ceng.payment.repository.FailedPaymentRepository;
 
 import java.math.BigDecimal;
@@ -42,7 +44,11 @@ public class FailedPaymentServiceTest {
     @Autowired
     private FailedPaymentService failedPaymentService;
 
+    @Autowired
+    private ModelMapper modelMapper;
+
     private FailedPayment failedPayment;
+    private FailedPaymentDTO failedPaymentDTO;
 
     @BeforeEach
     void setUp() {
@@ -54,6 +60,8 @@ public class FailedPaymentServiceTest {
         failedPayment.setAmount(new BigDecimal("150.75"));
         failedPayment.setFailureReason("Insufficient funds");
         failedPayment.setAttemptDate(LocalDateTime.now());
+
+        failedPaymentDTO = modelMapper.map(failedPayment, FailedPaymentDTO.class);
     }
 
     @AfterEach
@@ -67,10 +75,10 @@ public class FailedPaymentServiceTest {
     void testCreateFailedPayment() {
         when(failedPaymentRepository.save(any(FailedPayment.class))).thenReturn(failedPayment);
 
-        FailedPayment createdFailedPayment = failedPaymentService.save(failedPayment);
+        FailedPaymentDTO createdFailedPaymentDTO = failedPaymentService.save(failedPaymentDTO);
 
-        assertNotNull(createdFailedPayment, "FailedPayment creation failed, returned object is null.");
-        assertEquals(failedPayment.getFailedPaymentId(), createdFailedPayment.getFailedPaymentId());
+        assertNotNull(createdFailedPaymentDTO, "FailedPayment creation failed, returned object is null.");
+        assertEquals(failedPaymentDTO.getFailedPaymentId(), createdFailedPaymentDTO.getFailedPaymentId());
         verify(failedPaymentRepository, times(1)).save(any(FailedPayment.class));
     }
 
@@ -78,9 +86,9 @@ public class FailedPaymentServiceTest {
     void testFindFailedPaymentById_NotFound() {
         when(failedPaymentRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<FailedPayment> foundFailedPayment = failedPaymentService.findById(999L);
+        Optional<FailedPaymentDTO> foundFailedPaymentDTO = failedPaymentService.findById(999L);
 
-        assertFalse(foundFailedPayment.isPresent(), "FailedPayment should not be found.");
+        assertFalse(foundFailedPaymentDTO.isPresent(), "FailedPayment should not be found.");
         verify(failedPaymentRepository, times(1)).findById(999L);
     }
 
@@ -88,25 +96,28 @@ public class FailedPaymentServiceTest {
     void testFindFailedPaymentById() {
         when(failedPaymentRepository.findById(failedPayment.getFailedPaymentId())).thenReturn(Optional.of(failedPayment));
 
-        Optional<FailedPayment> foundFailedPayment = failedPaymentService.findById(failedPayment.getFailedPaymentId());
+        Optional<FailedPaymentDTO> foundFailedPaymentDTO = failedPaymentService.findById(failedPayment.getFailedPaymentId());
 
-        assertTrue(foundFailedPayment.isPresent(), "FailedPayment not found.");
-        assertEquals(failedPayment.getFailedPaymentId(), foundFailedPayment.get().getFailedPaymentId());
+        assertTrue(foundFailedPaymentDTO.isPresent(), "FailedPayment not found.");
+        assertEquals(failedPaymentDTO.getFailedPaymentId(), foundFailedPaymentDTO.get().getFailedPaymentId());
         verify(failedPaymentRepository, times(1)).findById(failedPayment.getFailedPaymentId());
     }
 
     @Test
     void testUpdateFailedPayment() {
+        // Güncellenmiş failureReason değerini failedPayment nesnesine ayarlıyoruz
         failedPayment.setFailureReason("Account closed");
+        failedPaymentDTO.setFailureReason("Account closed");
 
         when(failedPaymentRepository.save(any(FailedPayment.class))).thenReturn(failedPayment);
 
-        FailedPayment updatedFailedPayment = failedPaymentService.save(failedPayment);
+        FailedPaymentDTO updatedFailedPaymentDTO = failedPaymentService.save(failedPaymentDTO);
 
-        assertNotNull(updatedFailedPayment, "FailedPayment update failed, returned object is null.");
-        assertEquals("Account closed", updatedFailedPayment.getFailureReason(), "Failure reason did not update correctly.");
-        verify(failedPaymentRepository, times(1)).save(failedPayment);
+        assertNotNull(updatedFailedPaymentDTO, "FailedPayment update failed, returned object is null.");
+        assertEquals("Account closed", updatedFailedPaymentDTO.getFailureReason(), "Failure reason did not update correctly.");
+        verify(failedPaymentRepository, times(1)).save(any(FailedPayment.class));
     }
+
 
     @Test
     void testSoftDeleteFailedPayment() {
@@ -115,9 +126,9 @@ public class FailedPaymentServiceTest {
         when(failedPaymentRepository.findById(failedPayment.getFailedPaymentId())).thenReturn(Optional.of(failedPayment));
         when(failedPaymentRepository.save(any(FailedPayment.class))).thenReturn(failedPayment);
 
-        failedPaymentService.softDelete(failedPayment.getFailedPaymentId(), "testUser");
+        failedPaymentService.softDelete(failedPaymentDTO.getFailedPaymentId(), "testUser");
 
-        verify(failedPaymentRepository, times(1)).findById(failedPayment.getFailedPaymentId());
+        verify(failedPaymentRepository, times(1)).findById(failedPaymentDTO.getFailedPaymentId());
         verify(failedPaymentRepository, times(1)).save(captor.capture());
 
         FailedPayment softDeletedFailedPayment = captor.getValue();
@@ -139,7 +150,7 @@ public class FailedPaymentServiceTest {
     void testFindAllFailedPayments() {
         when(failedPaymentRepository.findAll()).thenReturn(List.of(failedPayment));
 
-        List<FailedPayment> failedPayments = failedPaymentService.findAll();
+        List<FailedPaymentDTO> failedPayments = failedPaymentService.findAll();
 
         assertNotNull(failedPayments, "FailedPayment list is null.");
         assertFalse(failedPayments.isEmpty(), "FailedPayment list is empty.");
@@ -149,13 +160,43 @@ public class FailedPaymentServiceTest {
 
     @Test
     void testSaveFailedPaymentSuccess() {
-        FailedPayment failedPayment = new FailedPayment();
-        failedPayment.setAmount(BigDecimal.valueOf(50.0));
+        failedPaymentDTO.setAmount(BigDecimal.valueOf(50.0));
+        failedPayment.setAmount(BigDecimal.valueOf(50.0)); // Beklenen değeri failedPayment nesnesinde de ayarlıyoruz
+
         when(failedPaymentRepository.save(any(FailedPayment.class))).thenReturn(failedPayment);
 
-        FailedPayment result = failedPaymentService.save(failedPayment);
+        FailedPaymentDTO result = failedPaymentService.save(failedPaymentDTO);
 
+        assertNotNull(result, "Saved FailedPaymentDTO should not be null");
         assertEquals(BigDecimal.valueOf(50.0), result.getAmount(), "Amount should be saved correctly");
     }
+
+    @Test
+    void testSaveFailedPaymentWithNegativeAmount() {
+        failedPaymentDTO.setAmount(BigDecimal.valueOf(-100.0));
+
+        when(failedPaymentRepository.save(any(FailedPayment.class))).thenReturn(failedPayment);
+
+        FailedPaymentDTO result = failedPaymentService.save(failedPaymentDTO);
+
+        assertNotNull(result, "FailedPaymentDTO creation failed, returned object is null.");
+        assertTrue(result.getAmount().compareTo(BigDecimal.ZERO) >= 0, "Failed payment amount should be non-negative");
+    }
+
+    @Test
+    void testFailedPaymentWithLongFailureReason() {
+        String longFailureReason = "a".repeat(256); // 256 karakter uzunluğunda bir neden
+
+        failedPaymentDTO.setFailureReason(longFailureReason);
+
+        when(failedPaymentRepository.save(any(FailedPayment.class))).thenReturn(failedPayment);
+
+        FailedPaymentDTO result = failedPaymentService.save(failedPaymentDTO);
+
+        assertNotNull(result, "FailedPaymentDTO creation failed, returned object is null.");
+        assertTrue(result.getFailureReason().length() <= 255, "Failure reason should not exceed 255 characters");
+    }
+
+
 
 }

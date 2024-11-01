@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -14,7 +15,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.Chargeback;
+import tr.edu.ogu.ceng.payment.dto.ChargebackDTO;
+import tr.edu.ogu.ceng.payment.entity.Chargeback;
 import tr.edu.ogu.ceng.payment.repository.ChargebackRepository;
 
 import java.math.BigDecimal;
@@ -43,7 +45,11 @@ public class ChargeBackServiceTest {
     @Autowired
     private ChargebackService chargebackService;
 
+    @Autowired
+    private ModelMapper modelMapper;
+
     private Chargeback chargeback;
+    private ChargebackDTO chargebackDTO;
 
     @BeforeEach
     void setUp() {
@@ -52,11 +58,13 @@ public class ChargeBackServiceTest {
         chargeback = new Chargeback();
         chargeback.setChargebackId(1L);
         chargeback.setUserId(UUID.randomUUID());
-        chargeback.setPayment(null); // Payment ilişkisini burada null olarak bırakıyoruz, gerekirse mocklayabiliriz
+        chargeback.setPayment(null);
         chargeback.setChargebackAmount(BigDecimal.valueOf(100.00));
         chargeback.setReason("Duplicate charge");
         chargeback.setFiledAt(LocalDateTime.now());
         chargeback.setStatus("PENDING");
+
+        chargebackDTO = modelMapper.map(chargeback, ChargebackDTO.class);
     }
 
     @AfterEach
@@ -70,10 +78,10 @@ public class ChargeBackServiceTest {
     void testCreateChargeback() {
         when(chargebackRepository.save(any(Chargeback.class))).thenReturn(chargeback);
 
-        Chargeback createdChargeback = chargebackService.save(chargeback);
+        ChargebackDTO createdChargebackDTO = chargebackService.save(chargebackDTO);
 
-        assertNotNull(createdChargeback, "Chargeback creation failed, returned object is null.");
-        assertEquals(chargeback.getChargebackId(), createdChargeback.getChargebackId());
+        assertNotNull(createdChargebackDTO, "Chargeback creation failed, returned object is null.");
+        assertEquals(chargebackDTO.getChargebackId(), createdChargebackDTO.getChargebackId());
         verify(chargebackRepository, times(1)).save(any(Chargeback.class));
     }
 
@@ -81,7 +89,7 @@ public class ChargeBackServiceTest {
     void testFindChargebackById_NotFound() {
         when(chargebackRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<Chargeback> foundChargeback = chargebackService.findById(999L);
+        Optional<ChargebackDTO> foundChargeback = chargebackService.findById(999L);
 
         assertFalse(foundChargeback.isPresent(), "Chargeback should not be found.");
         verify(chargebackRepository, times(1)).findById(999L);
@@ -91,25 +99,31 @@ public class ChargeBackServiceTest {
     void testFindChargebackById() {
         when(chargebackRepository.findById(chargeback.getChargebackId())).thenReturn(Optional.of(chargeback));
 
-        Optional<Chargeback> foundChargeback = chargebackService.findById(chargeback.getChargebackId());
+        Optional<ChargebackDTO> foundChargebackDTO = chargebackService.findById(chargebackDTO.getChargebackId());
 
-        assertTrue(foundChargeback.isPresent(), "Chargeback not found.");
-        assertEquals(chargeback.getChargebackId(), foundChargeback.get().getChargebackId());
+        assertTrue(foundChargebackDTO.isPresent(), "Chargeback not found.");
+        assertEquals(chargebackDTO.getChargebackId(), foundChargebackDTO.get().getChargebackId());
         verify(chargebackRepository, times(1)).findById(chargeback.getChargebackId());
     }
 
     @Test
     void testUpdateChargeback() {
-        chargeback.setReason("Updated reason");
+        // Test veri setinde "Updated reason" değerini ayarla
+        chargebackDTO.setReason("Updated reason");
 
-        when(chargebackRepository.save(any(Chargeback.class))).thenReturn(chargeback);
+        // mock save işlemi sırasında Chargeback nesnesinin geri dönüşünü güncel sebep ile ayarla
+        Chargeback updatedChargeback = new Chargeback();
+        updatedChargeback.setReason("Updated reason");
+        when(chargebackRepository.save(any(Chargeback.class))).thenReturn(updatedChargeback);
 
-        Chargeback updatedChargeback = chargebackService.save(chargeback);
+        // Servis çağrısı ve dönen değerlerin doğrulanması
+        ChargebackDTO updatedChargebackDTO = chargebackService.save(chargebackDTO);
 
-        assertNotNull(updatedChargeback, "Chargeback update failed, returned object is null.");
-        assertEquals("Updated reason", updatedChargeback.getReason());
-        verify(chargebackRepository, times(1)).save(chargeback);
+        assertNotNull(updatedChargebackDTO, "Chargeback update failed, returned object is null.");
+        assertEquals("Updated reason", updatedChargebackDTO.getReason(), "Reason did not update correctly.");
+        verify(chargebackRepository, times(1)).save(any(Chargeback.class));
     }
+
 
     @Test
     void testSoftDeleteChargeback() {
@@ -118,7 +132,7 @@ public class ChargeBackServiceTest {
         when(chargebackRepository.findById(chargeback.getChargebackId())).thenReturn(Optional.of(chargeback));
         when(chargebackRepository.save(any(Chargeback.class))).thenReturn(chargeback);
 
-        chargebackService.softDelete(chargeback.getChargebackId(), "testUser");
+        chargebackService.softDelete(chargebackDTO.getChargebackId(), "testUser");
 
         verify(chargebackRepository, times(1)).findById(chargeback.getChargebackId());
         verify(chargebackRepository, times(1)).save(captor.capture());
@@ -142,11 +156,11 @@ public class ChargeBackServiceTest {
     void testFindAllChargebacks() {
         when(chargebackRepository.findAll()).thenReturn(List.of(chargeback));
 
-        List<Chargeback> chargebacks = chargebackService.findAll();
+        List<ChargebackDTO> chargebackDTOs = chargebackService.findAll();
 
-        assertNotNull(chargebacks, "Chargeback list is null.");
-        assertFalse(chargebacks.isEmpty(), "Chargeback list is empty.");
-        assertEquals(1, chargebacks.size(), "Chargeback list size mismatch.");
+        assertNotNull(chargebackDTOs, "Chargeback list is null.");
+        assertFalse(chargebackDTOs.isEmpty(), "Chargeback list is empty.");
+        assertEquals(1, chargebackDTOs.size(), "Chargeback list size mismatch.");
         verify(chargebackRepository, times(1)).findAll();
     }
 
@@ -156,9 +170,8 @@ public class ChargeBackServiceTest {
         chargeback.setStatus("PENDING");
         when(chargebackRepository.save(any(Chargeback.class))).thenReturn(chargeback);
 
-        Chargeback savedChargeback = chargebackService.save(chargeback);
+        ChargebackDTO savedChargebackDTO = chargebackService.save(modelMapper.map(chargeback, ChargebackDTO.class));
 
-        assertNotNull(savedChargeback, "Saved chargeback should not be null");
+        assertNotNull(savedChargebackDTO, "Saved chargeback should not be null");
     }
-
 }

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -13,7 +14,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.PaymentFee;
+import tr.edu.ogu.ceng.payment.dto.PaymentFeeDTO;
+import tr.edu.ogu.ceng.payment.entity.PaymentFee;
 import tr.edu.ogu.ceng.payment.repository.PaymentFeeRepository;
 
 import java.math.BigDecimal;
@@ -42,17 +44,20 @@ public class PaymentFeeServiceTest {
     @Autowired
     private PaymentFeeService paymentFeeService;
 
-    private PaymentFee paymentFee;
+    @Autowired
+    private ModelMapper modelMapper;
+
+    private PaymentFeeDTO paymentFeeDTO;
 
     @BeforeEach
     void setUp() {
         reset(paymentFeeRepository);
 
-        paymentFee = new PaymentFee();
-        paymentFee.setFeeId(1L);
-        paymentFee.setFeeType("Transaction Fee");
-        paymentFee.setAmount(new BigDecimal("5.00"));
-        paymentFee.setCreatedAt(LocalDateTime.now());
+        paymentFeeDTO = new PaymentFeeDTO();
+        paymentFeeDTO.setFeeId(1L);
+        paymentFeeDTO.setFeeType("Transaction Fee");
+        paymentFeeDTO.setAmount(BigDecimal.valueOf(5.0));
+        paymentFeeDTO.setCreatedAt(LocalDateTime.now());
     }
 
     @AfterEach
@@ -64,12 +69,13 @@ public class PaymentFeeServiceTest {
 
     @Test
     void testCreatePaymentFee() {
+        PaymentFee paymentFee = modelMapper.map(paymentFeeDTO, PaymentFee.class);
         when(paymentFeeRepository.save(any(PaymentFee.class))).thenReturn(paymentFee);
 
-        PaymentFee createdFee = paymentFeeService.save(paymentFee);
+        PaymentFeeDTO createdFeeDTO = paymentFeeService.save(paymentFeeDTO);
 
-        assertNotNull(createdFee, "PaymentFee creation failed, returned object is null.");
-        assertEquals(paymentFee.getFeeId(), createdFee.getFeeId());
+        assertNotNull(createdFeeDTO, "PaymentFee creation failed, returned object is null.");
+        assertEquals(paymentFeeDTO.getFeeId(), createdFeeDTO.getFeeId());
         verify(paymentFeeRepository, times(1)).save(any(PaymentFee.class));
     }
 
@@ -77,46 +83,50 @@ public class PaymentFeeServiceTest {
     void testFindPaymentFeeById_NotFound() {
         when(paymentFeeRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<PaymentFee> foundFee = paymentFeeService.findById(999L);
+        Optional<PaymentFeeDTO> foundFeeDTO = paymentFeeService.findById(999L);
 
-        assertFalse(foundFee.isPresent(), "PaymentFee should not be found.");
+        assertFalse(foundFeeDTO.isPresent(), "PaymentFee should not be found.");
         verify(paymentFeeRepository, times(1)).findById(999L);
     }
 
     @Test
     void testFindPaymentFeeById() {
-        when(paymentFeeRepository.findById(paymentFee.getFeeId())).thenReturn(Optional.of(paymentFee));
+        PaymentFee paymentFee = modelMapper.map(paymentFeeDTO, PaymentFee.class);
+        when(paymentFeeRepository.findById(paymentFeeDTO.getFeeId())).thenReturn(Optional.of(paymentFee));
 
-        Optional<PaymentFee> foundFee = paymentFeeService.findById(paymentFee.getFeeId());
+        Optional<PaymentFeeDTO> foundFeeDTO = paymentFeeService.findById(paymentFeeDTO.getFeeId());
 
-        assertTrue(foundFee.isPresent(), "PaymentFee not found.");
-        assertEquals(paymentFee.getFeeId(), foundFee.get().getFeeId());
-        verify(paymentFeeRepository, times(1)).findById(paymentFee.getFeeId());
+        assertTrue(foundFeeDTO.isPresent(), "PaymentFee not found.");
+        assertEquals(paymentFeeDTO.getFeeId(), foundFeeDTO.get().getFeeId());
+        verify(paymentFeeRepository, times(1)).findById(paymentFeeDTO.getFeeId());
     }
 
     @Test
     void testUpdatePaymentFee() {
-        paymentFee.setAmount(new BigDecimal("10.00"));
+        paymentFeeDTO.setAmount(BigDecimal.valueOf(10.0));
+        PaymentFee updatedPaymentFee = modelMapper.map(paymentFeeDTO, PaymentFee.class);
 
-        when(paymentFeeRepository.save(any(PaymentFee.class))).thenReturn(paymentFee);
+        when(paymentFeeRepository.save(any(PaymentFee.class))).thenReturn(updatedPaymentFee);
 
-        PaymentFee updatedFee = paymentFeeService.save(paymentFee);
+        PaymentFeeDTO updatedFeeDTO = paymentFeeService.save(paymentFeeDTO);
 
-        assertNotNull(updatedFee, "PaymentFee update failed, returned object is null.");
-        assertEquals(new BigDecimal("10.00"), updatedFee.getAmount(), "Fee amount did not update correctly.");
-        verify(paymentFeeRepository, times(1)).save(paymentFee);
+        assertNotNull(updatedFeeDTO, "PaymentFee update failed, returned object is null.");
+        assertEquals(BigDecimal.valueOf(10.0), updatedFeeDTO.getAmount(), "Fee amount did not update correctly.");
+        verify(paymentFeeRepository, times(1)).save(any(PaymentFee.class));
     }
+
 
     @Test
     void testSoftDeletePaymentFee() {
+        PaymentFee paymentFee = modelMapper.map(paymentFeeDTO, PaymentFee.class);
         ArgumentCaptor<PaymentFee> captor = ArgumentCaptor.forClass(PaymentFee.class);
 
-        when(paymentFeeRepository.findById(paymentFee.getFeeId())).thenReturn(Optional.of(paymentFee));
+        when(paymentFeeRepository.findById(paymentFeeDTO.getFeeId())).thenReturn(Optional.of(paymentFee));
         when(paymentFeeRepository.save(any(PaymentFee.class))).thenReturn(paymentFee);
 
-        paymentFeeService.softDelete(paymentFee.getFeeId(), "testUser");
+        paymentFeeService.softDelete(paymentFeeDTO.getFeeId(), "testUser");
 
-        verify(paymentFeeRepository, times(1)).findById(paymentFee.getFeeId());
+        verify(paymentFeeRepository, times(1)).findById(paymentFeeDTO.getFeeId());
         verify(paymentFeeRepository, times(1)).save(captor.capture());
 
         PaymentFee softDeletedFee = captor.getValue();
@@ -136,13 +146,14 @@ public class PaymentFeeServiceTest {
 
     @Test
     void testFindAllPaymentFees() {
+        PaymentFee paymentFee = modelMapper.map(paymentFeeDTO, PaymentFee.class);
         when(paymentFeeRepository.findAll()).thenReturn(List.of(paymentFee));
 
-        List<PaymentFee> feesList = paymentFeeService.findAll();
+        List<PaymentFeeDTO> feesListDTO = paymentFeeService.findAll();
 
-        assertNotNull(feesList, "PaymentFee list is null.");
-        assertFalse(feesList.isEmpty(), "PaymentFee list is empty.");
-        assertEquals(1, feesList.size(), "PaymentFee list size mismatch.");
+        assertNotNull(feesListDTO, "PaymentFee list is null.");
+        assertFalse(feesListDTO.isEmpty(), "PaymentFee list is empty.");
+        assertEquals(1, feesListDTO.size(), "PaymentFee list size mismatch.");
         verify(paymentFeeRepository, times(1)).findAll();
     }
 
@@ -150,9 +161,11 @@ public class PaymentFeeServiceTest {
     void testFindAllPaymentFeesEmptyList() {
         when(paymentFeeRepository.findAll()).thenReturn(Collections.emptyList());
 
-        List<PaymentFee> fees = paymentFeeService.findAll();
+        List<PaymentFeeDTO> feesListDTO = paymentFeeService.findAll();
 
-        assertTrue(fees.isEmpty(), "findAll should return an empty list if no payment fees exist");
+        assertTrue(feesListDTO.isEmpty(), "findAll should return an empty list if no payment fees exist");
     }
+
+
 
 }

@@ -2,29 +2,39 @@ package tr.edu.ogu.ceng.payment.service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
-import tr.edu.ogu.ceng.payment.model.Session;
+import tr.edu.ogu.ceng.payment.dto.SessionDTO;
+import tr.edu.ogu.ceng.payment.entity.Session;
 import tr.edu.ogu.ceng.payment.repository.SessionRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
 public class SessionService {
 
     private final SessionRepository sessionRepository;
+    private final ModelMapper modelMapper;
 
-    public List<Session> findAll() {
-        return sessionRepository.findAll();
+    public List<SessionDTO> findAll() {
+        return sessionRepository.findAll()
+                .stream()
+                .map(session -> modelMapper.map(session, SessionDTO.class))
+                .collect(Collectors.toList());
     }
 
-    public Optional<Session> findById(Long id) {
-        return sessionRepository.findById(id);
+    public Optional<SessionDTO> findById(Long id) {
+        return sessionRepository.findById(id)
+                .map(session -> modelMapper.map(session, SessionDTO.class));
     }
 
-    public Session save(Session session) {
-        return sessionRepository.save(session);
+    public SessionDTO save(SessionDTO sessionDTO) {
+        Session session = modelMapper.map(sessionDTO, Session.class);
+        Session savedSession = sessionRepository.save(session);
+        return modelMapper.map(savedSession, SessionDTO.class);
     }
 
     @Transactional

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -13,7 +14,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.FraudDetection;
+import tr.edu.ogu.ceng.payment.dto.FraudDetectionDTO;
+import tr.edu.ogu.ceng.payment.entity.FraudDetection;
 import tr.edu.ogu.ceng.payment.repository.FraudDetectionRepository;
 
 import java.math.BigDecimal;
@@ -42,7 +44,11 @@ public class FraudDetectionServiceTest {
     @Autowired
     private FraudDetectionService fraudDetectionService;
 
+    @Autowired
+    private ModelMapper modelMapper;
+
     private FraudDetection fraudDetection;
+    private FraudDetectionDTO fraudDetectionDTO;
 
     @BeforeEach
     void setUp() {
@@ -55,6 +61,8 @@ public class FraudDetectionServiceTest {
         fraudDetection.setStatus("Pending");
         fraudDetection.setSuspiciousReason("High transaction frequency");
         fraudDetection.setReportedAt(LocalDateTime.now());
+
+        fraudDetectionDTO = modelMapper.map(fraudDetection, FraudDetectionDTO.class);
     }
 
     @AfterEach
@@ -68,10 +76,10 @@ public class FraudDetectionServiceTest {
     void testCreateFraudDetection() {
         when(fraudDetectionRepository.save(any(FraudDetection.class))).thenReturn(fraudDetection);
 
-        FraudDetection createdFraudDetection = fraudDetectionService.save(fraudDetection);
+        FraudDetectionDTO createdFraudDetectionDTO = fraudDetectionService.save(fraudDetectionDTO);
 
-        assertNotNull(createdFraudDetection, "FraudDetection creation failed, returned object is null.");
-        assertEquals(fraudDetection.getFraudCaseId(), createdFraudDetection.getFraudCaseId());
+        assertNotNull(createdFraudDetectionDTO, "FraudDetection creation failed, returned object is null.");
+        assertEquals(fraudDetectionDTO.getFraudCaseId(), createdFraudDetectionDTO.getFraudCaseId());
         verify(fraudDetectionRepository, times(1)).save(any(FraudDetection.class));
     }
 
@@ -79,9 +87,9 @@ public class FraudDetectionServiceTest {
     void testFindFraudDetectionById_NotFound() {
         when(fraudDetectionRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<FraudDetection> foundFraudDetection = fraudDetectionService.findById(999L);
+        Optional<FraudDetectionDTO> foundFraudDetectionDTO = fraudDetectionService.findById(999L);
 
-        assertFalse(foundFraudDetection.isPresent(), "FraudDetection should not be found.");
+        assertFalse(foundFraudDetectionDTO.isPresent(), "FraudDetection should not be found.");
         verify(fraudDetectionRepository, times(1)).findById(999L);
     }
 
@@ -89,25 +97,31 @@ public class FraudDetectionServiceTest {
     void testFindFraudDetectionById() {
         when(fraudDetectionRepository.findById(fraudDetection.getFraudCaseId())).thenReturn(Optional.of(fraudDetection));
 
-        Optional<FraudDetection> foundFraudDetection = fraudDetectionService.findById(fraudDetection.getFraudCaseId());
+        Optional<FraudDetectionDTO> foundFraudDetectionDTO = fraudDetectionService.findById(fraudDetection.getFraudCaseId());
 
-        assertTrue(foundFraudDetection.isPresent(), "FraudDetection not found.");
-        assertEquals(fraudDetection.getFraudCaseId(), foundFraudDetection.get().getFraudCaseId());
+        assertTrue(foundFraudDetectionDTO.isPresent(), "FraudDetection not found.");
+        assertEquals(fraudDetectionDTO.getFraudCaseId(), foundFraudDetectionDTO.get().getFraudCaseId());
         verify(fraudDetectionRepository, times(1)).findById(fraudDetection.getFraudCaseId());
     }
 
     @Test
     void testUpdateFraudDetection() {
-        fraudDetection.setStatus("Resolved");
+        // Test veri setini güncelleyerek "Resolved" durumunu ayarla
+        fraudDetectionDTO.setStatus("Resolved");
 
-        when(fraudDetectionRepository.save(any(FraudDetection.class))).thenReturn(fraudDetection);
+        // mock save işlemi sırasında FraudDetection nesnesinin geri dönüşünü güncel durum ile ayarla
+        FraudDetection updatedFraudDetection = new FraudDetection();
+        updatedFraudDetection.setStatus("Resolved");
+        when(fraudDetectionRepository.save(any(FraudDetection.class))).thenReturn(updatedFraudDetection);
 
-        FraudDetection updatedFraudDetection = fraudDetectionService.save(fraudDetection);
+        // Servis çağrısı ve dönen değerlerin doğrulanması
+        FraudDetectionDTO updatedFraudDetectionDTO = fraudDetectionService.save(fraudDetectionDTO);
 
-        assertNotNull(updatedFraudDetection, "FraudDetection update failed, returned object is null.");
-        assertEquals("Resolved", updatedFraudDetection.getStatus(), "Status did not update correctly.");
-        verify(fraudDetectionRepository, times(1)).save(fraudDetection);
+        assertNotNull(updatedFraudDetectionDTO, "FraudDetection update failed, returned object is null.");
+        assertEquals("Resolved", updatedFraudDetectionDTO.getStatus(), "Status did not update correctly.");
+        verify(fraudDetectionRepository, times(1)).save(any(FraudDetection.class));
     }
+
 
     @Test
     void testSoftDeleteFraudDetection() {
@@ -116,9 +130,9 @@ public class FraudDetectionServiceTest {
         when(fraudDetectionRepository.findById(fraudDetection.getFraudCaseId())).thenReturn(Optional.of(fraudDetection));
         when(fraudDetectionRepository.save(any(FraudDetection.class))).thenReturn(fraudDetection);
 
-        fraudDetectionService.softDelete(fraudDetection.getFraudCaseId(), "testUser");
+        fraudDetectionService.softDelete(fraudDetectionDTO.getFraudCaseId(), "testUser");
 
-        verify(fraudDetectionRepository, times(1)).findById(fraudDetection.getFraudCaseId());
+        verify(fraudDetectionRepository, times(1)).findById(fraudDetectionDTO.getFraudCaseId());
         verify(fraudDetectionRepository, times(1)).save(captor.capture());
 
         FraudDetection softDeletedFraudDetection = captor.getValue();
@@ -140,7 +154,7 @@ public class FraudDetectionServiceTest {
     void testFindAllFraudDetections() {
         when(fraudDetectionRepository.findAll()).thenReturn(List.of(fraudDetection));
 
-        List<FraudDetection> fraudDetections = fraudDetectionService.findAll();
+        List<FraudDetectionDTO> fraudDetections = fraudDetectionService.findAll();
 
         assertNotNull(fraudDetections, "FraudDetection list is null.");
         assertFalse(fraudDetections.isEmpty(), "FraudDetection list is empty.");
@@ -152,10 +166,21 @@ public class FraudDetectionServiceTest {
     void testFindByIdReturnsEmptyWhenNotFound() {
         when(fraudDetectionRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<FraudDetection> result = fraudDetectionService.findById(1L);
+        Optional<FraudDetectionDTO> result = fraudDetectionService.findById(1L);
 
         assertFalse(result.isPresent(), "Should return Optional.empty() if fraud detection not found");
     }
 
-}
+    @Test
+    void testUpdateFraudDetectionWithNegativeScore() {
+        fraudDetectionDTO.setFraudScore(BigDecimal.valueOf(-5.0)); // Negatif değer
 
+        when(fraudDetectionRepository.save(any(FraudDetection.class))).thenReturn(fraudDetection);
+
+        FraudDetectionDTO updatedFraudDetectionDTO = fraudDetectionService.save(fraudDetectionDTO);
+
+        assertNotNull(updatedFraudDetectionDTO, "FraudDetection update failed, returned object is null.");
+        assertTrue(updatedFraudDetectionDTO.getFraudScore().compareTo(BigDecimal.ZERO) >= 0, "Fraud score should be non-negative");
+    }
+
+}

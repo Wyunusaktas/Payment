@@ -2,7 +2,7 @@ package tr.edu.ogu.ceng.payment.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import tr.edu.ogu.ceng.payment.model.Discount;
+import tr.edu.ogu.ceng.payment.dto.DiscountDTO;
 import tr.edu.ogu.ceng.payment.service.DiscountService;
 
 import java.util.List;
@@ -16,27 +16,26 @@ public class DiscountController {
     private final DiscountService discountService;
 
     @GetMapping
-    public List<Discount> getAllDiscounts() {
+    public List<DiscountDTO> getAllDiscounts() {
         return discountService.findAll();
     }
 
     @GetMapping("/{id}")
-    public Optional<Discount> getDiscount(@PathVariable Long id) {
+    public Optional<DiscountDTO> getDiscount(@PathVariable Long id) {
         return discountService.findById(id);
     }
 
     @PostMapping
-    public Discount createDiscount(@RequestBody Discount discount) {
-        return discountService.save(discount);
+    public DiscountDTO createDiscount(@RequestBody DiscountDTO discountDTO) {
+        return discountService.save(discountDTO);
     }
 
     @PutMapping("/{id}")
-    public Discount updateDiscount(@PathVariable Long id, @RequestBody Discount discount) {
-        discount.setDiscountId(id);  // ID'yi set et
-        return discountService.save(discount);
+    public DiscountDTO updateDiscount(@PathVariable Long id, @RequestBody DiscountDTO discountDTO) {
+        discountDTO.setDiscountId(id);  // ID'yi set et
+        return discountService.save(discountDTO);
     }
 
-    // Soft delete işlemi için güncellenmiş endpoint
     @DeleteMapping("/{id}")
     public void softDeleteDiscount(@PathVariable Long id) {
         discountService.softDelete(id, "system"); // "system" yerine geçerli kullanıcı bilgisi eklenebilir

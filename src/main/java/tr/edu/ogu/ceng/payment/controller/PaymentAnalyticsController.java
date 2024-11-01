@@ -2,7 +2,7 @@ package tr.edu.ogu.ceng.payment.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import tr.edu.ogu.ceng.payment.model.PaymentAnalytics;
+import tr.edu.ogu.ceng.payment.dto.PaymentAnalyticsDTO;
 import tr.edu.ogu.ceng.payment.service.PaymentAnalyticsService;
 
 import java.util.List;
@@ -16,24 +16,24 @@ public class PaymentAnalyticsController {
     private final PaymentAnalyticsService paymentAnalyticsService;
 
     @GetMapping
-    public List<PaymentAnalytics> getAllPaymentAnalytics() {
+    public List<PaymentAnalyticsDTO> getAllPaymentAnalytics() {
         return paymentAnalyticsService.findAll();
     }
 
     @GetMapping("/{id}")
-    public Optional<PaymentAnalytics> getPaymentAnalytics(@PathVariable Long id) {
+    public Optional<PaymentAnalyticsDTO> getPaymentAnalytics(@PathVariable Long id) {
         return paymentAnalyticsService.findById(id);
     }
 
     @PostMapping
-    public PaymentAnalytics createPaymentAnalytics(@RequestBody PaymentAnalytics paymentAnalytics) {
-        return paymentAnalyticsService.save(paymentAnalytics);
+    public PaymentAnalyticsDTO createPaymentAnalytics(@RequestBody PaymentAnalyticsDTO paymentAnalyticsDTO) {
+        return paymentAnalyticsService.save(paymentAnalyticsDTO);
     }
 
     @PutMapping("/{id}")
-    public PaymentAnalytics updatePaymentAnalytics(@PathVariable Long id, @RequestBody PaymentAnalytics paymentAnalytics) {
-        paymentAnalytics.setAnalyticsId(id);  // ID'yi set et
-        return paymentAnalyticsService.save(paymentAnalytics);
+    public PaymentAnalyticsDTO updatePaymentAnalytics(@PathVariable Long id, @RequestBody PaymentAnalyticsDTO paymentAnalyticsDTO) {
+        paymentAnalyticsDTO.setAnalyticsId(id);  // ID'yi ayarla
+        return paymentAnalyticsService.save(paymentAnalyticsDTO);
     }
 
     @DeleteMapping("/{id}")

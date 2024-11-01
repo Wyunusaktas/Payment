@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -13,7 +14,8 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.model.Refund;
+import tr.edu.ogu.ceng.payment.dto.RefundDTO;
+import tr.edu.ogu.ceng.payment.entity.Refund;
 import tr.edu.ogu.ceng.payment.repository.RefundRepository;
 
 import java.math.BigDecimal;
@@ -41,19 +43,22 @@ public class RefundServiceTest {
     @Autowired
     private RefundService refundService;
 
-    private Refund refund;
+    @Autowired
+    private ModelMapper modelMapper;
+
+    private RefundDTO refundDTO;
 
     @BeforeEach
     void setUp() {
         reset(refundRepository);
 
-        refund = new Refund();
-        refund.setRefundId(1L);
-        refund.setRefundAmount(BigDecimal.valueOf(50.00));
-        refund.setRefundReason("Product returned");
-        refund.setStatus("Pending");
-        refund.setRefundDate(LocalDateTime.now());
-        refund.setRefundMethod("Bank Transfer");
+        refundDTO = new RefundDTO();
+        refundDTO.setRefundId(1L);
+        refundDTO.setRefundAmount(BigDecimal.valueOf(50.00));
+        refundDTO.setRefundReason("Product returned");
+        refundDTO.setStatus("Pending");
+        refundDTO.setRefundDate(LocalDateTime.now());
+        refundDTO.setRefundMethod("Bank Transfer");
     }
 
     @AfterEach
@@ -65,12 +70,13 @@ public class RefundServiceTest {
 
     @Test
     void testCreateRefund() {
+        Refund refund = modelMapper.map(refundDTO, Refund.class);
         when(refundRepository.save(any(Refund.class))).thenReturn(refund);
 
-        Refund createdRefund = refundService.save(refund);
+        RefundDTO createdRefundDTO = refundService.save(refundDTO);
 
-        assertNotNull(createdRefund, "Refund creation failed, returned object is null.");
-        assertEquals(refund.getRefundId(), createdRefund.getRefundId());
+        assertNotNull(createdRefundDTO, "Refund creation failed, returned object is null.");
+        assertEquals(refundDTO.getRefundId(), createdRefundDTO.getRefundId());
         verify(refundRepository, times(1)).save(any(Refund.class));
     }
 
@@ -78,46 +84,49 @@ public class RefundServiceTest {
     void testFindRefundById_NotFound() {
         when(refundRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        Optional<Refund> foundRefund = refundService.findById(999L);
+        Optional<RefundDTO> foundRefundDTO = refundService.findById(999L);
 
-        assertFalse(foundRefund.isPresent(), "Refund should not be found.");
+        assertFalse(foundRefundDTO.isPresent(), "Refund should not be found.");
         verify(refundRepository, times(1)).findById(999L);
     }
 
     @Test
     void testFindRefundById() {
-        when(refundRepository.findById(refund.getRefundId())).thenReturn(Optional.of(refund));
+        Refund refund = modelMapper.map(refundDTO, Refund.class);
+        when(refundRepository.findById(refundDTO.getRefundId())).thenReturn(Optional.of(refund));
 
-        Optional<Refund> foundRefund = refundService.findById(refund.getRefundId());
+        Optional<RefundDTO> foundRefundDTO = refundService.findById(refundDTO.getRefundId());
 
-        assertTrue(foundRefund.isPresent(), "Refund not found.");
-        assertEquals(refund.getRefundId(), foundRefund.get().getRefundId());
-        verify(refundRepository, times(1)).findById(refund.getRefundId());
+        assertTrue(foundRefundDTO.isPresent(), "Refund not found.");
+        assertEquals(refundDTO.getRefundId(), foundRefundDTO.get().getRefundId());
+        verify(refundRepository, times(1)).findById(refundDTO.getRefundId());
     }
 
     @Test
     void testUpdateRefund() {
-        refund.setStatus("Approved");
+        refundDTO.setStatus("Approved");
+        Refund updatedRefund = modelMapper.map(refundDTO, Refund.class);
 
-        when(refundRepository.save(any(Refund.class))).thenReturn(refund);
+        when(refundRepository.save(any(Refund.class))).thenReturn(updatedRefund);
 
-        Refund updatedRefund = refundService.save(refund);
+        RefundDTO updatedRefundDTO = refundService.save(refundDTO);
 
-        assertNotNull(updatedRefund, "Refund update failed, returned object is null.");
-        assertEquals("Approved", updatedRefund.getStatus(), "Status did not update correctly.");
-        verify(refundRepository, times(1)).save(refund);
+        assertNotNull(updatedRefundDTO, "Refund update failed, returned object is null.");
+        assertEquals("Approved", updatedRefundDTO.getStatus(), "Status did not update correctly.");
+        verify(refundRepository, times(1)).save(any(Refund.class));
     }
 
     @Test
     void testSoftDeleteRefund() {
+        Refund refund = modelMapper.map(refundDTO, Refund.class);
         ArgumentCaptor<Refund> captor = ArgumentCaptor.forClass(Refund.class);
 
-        when(refundRepository.findById(refund.getRefundId())).thenReturn(Optional.of(refund));
+        when(refundRepository.findById(refundDTO.getRefundId())).thenReturn(Optional.of(refund));
         when(refundRepository.save(any(Refund.class))).thenReturn(refund);
 
-        refundService.softDelete(refund.getRefundId(), "testUser");
+        refundService.softDelete(refundDTO.getRefundId(), "testUser");
 
-        verify(refundRepository, times(1)).findById(refund.getRefundId());
+        verify(refundRepository, times(1)).findById(refundDTO.getRefundId());
         verify(refundRepository, times(1)).save(captor.capture());
 
         Refund softDeletedRefund = captor.getValue();
@@ -137,23 +146,24 @@ public class RefundServiceTest {
 
     @Test
     void testFindAllRefunds() {
+        Refund refund = modelMapper.map(refundDTO, Refund.class);
         when(refundRepository.findAll()).thenReturn(List.of(refund));
 
-        List<Refund> refundList = refundService.findAll();
+        List<RefundDTO> refundDTOList = refundService.findAll();
 
-        assertNotNull(refundList, "Refund list is null.");
-        assertFalse(refundList.isEmpty(), "Refund list is empty.");
-        assertEquals(1, refundList.size(), "Refund list size mismatch.");
+        assertNotNull(refundDTOList, "Refund list is null.");
+        assertFalse(refundDTOList.isEmpty(), "Refund list is empty.");
+        assertEquals(1, refundDTOList.size(), "Refund list size mismatch.");
         verify(refundRepository, times(1)).findAll();
     }
 
     @Test
     void testFindByIdReturnsRefund() {
-        Refund refund = new Refund();
+        Refund refund = modelMapper.map(refundDTO, Refund.class);
         refund.setStatus("COMPLETED");
         when(refundRepository.findById(1L)).thenReturn(Optional.of(refund));
 
-        Optional<Refund> result = refundService.findById(1L);
+        Optional<RefundDTO> result = refundService.findById(1L);
 
         assertTrue(result.isPresent(), "findById should return a refund when the ID is valid");
         assertEquals("COMPLETED", result.get().getStatus(), "Status should match");

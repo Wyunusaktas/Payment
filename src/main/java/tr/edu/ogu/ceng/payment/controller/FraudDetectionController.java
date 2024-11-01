@@ -2,7 +2,7 @@ package tr.edu.ogu.ceng.payment.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import tr.edu.ogu.ceng.payment.model.FraudDetection;
+import tr.edu.ogu.ceng.payment.dto.FraudDetectionDTO;
 import tr.edu.ogu.ceng.payment.service.FraudDetectionService;
 
 import java.util.List;
@@ -16,24 +16,24 @@ public class FraudDetectionController {
     private final FraudDetectionService fraudDetectionService;
 
     @GetMapping
-    public List<FraudDetection> getAllFraudDetections() {
+    public List<FraudDetectionDTO> getAllFraudDetections() {
         return fraudDetectionService.findAll();
     }
 
     @GetMapping("/{id}")
-    public Optional<FraudDetection> getFraudDetection(@PathVariable Long id) {
+    public Optional<FraudDetectionDTO> getFraudDetection(@PathVariable Long id) {
         return fraudDetectionService.findById(id);
     }
 
     @PostMapping
-    public FraudDetection createFraudDetection(@RequestBody FraudDetection fraudDetection) {
-        return fraudDetectionService.save(fraudDetection);
+    public FraudDetectionDTO createFraudDetection(@RequestBody FraudDetectionDTO fraudDetectionDTO) {
+        return fraudDetectionService.save(fraudDetectionDTO);
     }
 
     @PutMapping("/{id}")
-    public FraudDetection updateFraudDetection(@PathVariable Long id, @RequestBody FraudDetection fraudDetection) {
-        fraudDetection.setFraudCaseId(id);  // ID'yi set et
-        return fraudDetectionService.save(fraudDetection);
+    public FraudDetectionDTO updateFraudDetection(@PathVariable Long id, @RequestBody FraudDetectionDTO fraudDetectionDTO) {
+        fraudDetectionDTO.setFraudCaseId(id);  // ID'yi ayarla
+        return fraudDetectionService.save(fraudDetectionDTO);
     }
 
     @DeleteMapping("/{id}")

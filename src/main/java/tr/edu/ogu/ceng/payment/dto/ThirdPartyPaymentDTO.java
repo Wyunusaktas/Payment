@@ -4,7 +4,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-public class ThirdPartyPaymentDTO {
+public class ThirdPartyPaymentDTO extends BaseDTO {
     private Long thirdPartyPaymentId;
     private Long paymentId;
     private String provider;

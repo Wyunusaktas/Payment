@@ -2,29 +2,39 @@ package tr.edu.ogu.ceng.payment.service;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
-import tr.edu.ogu.ceng.payment.model.FraudDetection;
+import tr.edu.ogu.ceng.payment.dto.FraudDetectionDTO;
+import tr.edu.ogu.ceng.payment.entity.FraudDetection;
 import tr.edu.ogu.ceng.payment.repository.FraudDetectionRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
 public class FraudDetectionService {
 
     private final FraudDetectionRepository fraudDetectionRepository;
+    private final ModelMapper modelMapper;
 
-    public List<FraudDetection> findAll() {
-        return fraudDetectionRepository.findAll();
+    public List<FraudDetectionDTO> findAll() {
+        return fraudDetectionRepository.findAll()
+                .stream()
+                .map(fraudDetection -> modelMapper.map(fraudDetection, FraudDetectionDTO.class))
+                .collect(Collectors.toList());
     }
 
-    public Optional<FraudDetection> findById(Long id) {
-        return fraudDetectionRepository.findById(id);
+    public Optional<FraudDetectionDTO> findById(Long id) {
+        return fraudDetectionRepository.findById(id)
+                .map(fraudDetection -> modelMapper.map(fraudDetection, FraudDetectionDTO.class));
     }
 
-    public FraudDetection save(FraudDetection fraudDetection) {
-        return fraudDetectionRepository.save(fraudDetection);
+    public FraudDetectionDTO save(FraudDetectionDTO fraudDetectionDTO) {
+        FraudDetection fraudDetection = modelMapper.map(fraudDetectionDTO, FraudDetection.class);
+        FraudDetection savedFraudDetection = fraudDetectionRepository.save(fraudDetection);
+        return modelMapper.map(savedFraudDetection, FraudDetectionDTO.class);
     }
 
     @Transactional

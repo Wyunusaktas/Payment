@@ -1,37 +1,47 @@
 package tr.edu.ogu.ceng.payment.service;
 
 import lombok.RequiredArgsConstructor;
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tr.edu.ogu.ceng.payment.model.Setting;
+import tr.edu.ogu.ceng.payment.dto.SettingDTO;
+import tr.edu.ogu.ceng.payment.entity.Setting;
 import tr.edu.ogu.ceng.payment.repository.SettingRepository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
 public class SettingService {
 
     private final SettingRepository settingRepository;
+    private final ModelMapper modelMapper;
 
-    public List<Setting> findAll() {
-        return settingRepository.findAll();
+    public List<SettingDTO> findAll() {
+        return settingRepository.findAll()
+                .stream()
+                .map(setting -> modelMapper.map(setting, SettingDTO.class))
+                .collect(Collectors.toList());
     }
 
-    public Optional<Setting> findById(Long id) {
-        return settingRepository.findById(id);
+    public Optional<SettingDTO> findById(Long id) {
+        return settingRepository.findById(id)
+                .map(setting -> modelMapper.map(setting, SettingDTO.class));
     }
 
-    public Setting findBySettingKey(String settingKey) {
-        return settingRepository.findBySettingKey(settingKey);
+    public SettingDTO findBySettingKey(String settingKey) {
+        Setting setting = settingRepository.findBySettingKey(settingKey);
+        return modelMapper.map(setting, SettingDTO.class);
     }
 
-    public Setting save(Setting setting) {
-        return settingRepository.save(setting);
+    public SettingDTO save(SettingDTO settingDTO) {
+        Setting setting = modelMapper.map(settingDTO, Setting.class);
+        Setting savedSetting = settingRepository.save(setting);
+        return modelMapper.map(savedSetting, SettingDTO.class);
     }
 
-    // Soft delete işlemi için yeni metod
     @Transactional
     public void softDelete(Long id, String deletedBy) {
         Optional<Setting> settingOptional = settingRepository.findById(id);

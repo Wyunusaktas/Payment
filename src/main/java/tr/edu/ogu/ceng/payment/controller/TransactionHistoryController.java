@@ -2,7 +2,7 @@ package tr.edu.ogu.ceng.payment.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-import tr.edu.ogu.ceng.payment.model.TransactionHistory;
+import tr.edu.ogu.ceng.payment.dto.TransactionHistoryDTO;
 import tr.edu.ogu.ceng.payment.service.TransactionHistoryService;
 
 import java.util.List;
@@ -16,28 +16,28 @@ public class TransactionHistoryController {
     private final TransactionHistoryService transactionHistoryService;
 
     @GetMapping
-    public List<TransactionHistory> getAllTransactionHistories() {
+    public List<TransactionHistoryDTO> getAllTransactionHistories() {
         return transactionHistoryService.findAll();
     }
 
     @GetMapping("/{id}")
-    public Optional<TransactionHistory> getTransactionHistory(@PathVariable Long id) {
+    public Optional<TransactionHistoryDTO> getTransactionHistory(@PathVariable Long id) {
         return transactionHistoryService.findById(id);
     }
 
     @PostMapping
-    public TransactionHistory createTransactionHistory(@RequestBody TransactionHistory transactionHistory) {
-        return transactionHistoryService.save(transactionHistory);
+    public TransactionHistoryDTO createTransactionHistory(@RequestBody TransactionHistoryDTO transactionHistoryDTO) {
+        return transactionHistoryService.save(transactionHistoryDTO);
     }
 
     @PutMapping("/{id}")
-    public TransactionHistory updateTransactionHistory(@PathVariable Long id, @RequestBody TransactionHistory transactionHistory) {
-        transactionHistory.setHistoryId(id);  // ID'yi set et
-        return transactionHistoryService.save(transactionHistory);
+    public TransactionHistoryDTO updateTransactionHistory(@PathVariable Long id, @RequestBody TransactionHistoryDTO transactionHistoryDTO) {
+        transactionHistoryDTO.setHistoryId(id);  // ID'yi ayarla
+        return transactionHistoryService.save(transactionHistoryDTO);
     }
 
     @DeleteMapping("/{id}")
     public void softDeleteTransactionHistory(@PathVariable Long id) {
-        transactionHistoryService.softDelete(id, "system"); // "system" yerine kullanıcı bilgisi eklenebilir
+        transactionHistoryService.softDelete(id, "system");
     }
 }
