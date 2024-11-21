@@ -30,11 +30,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(SpringExtension.class)
 public class SettingServiceTest {
 
-    @Container
-    public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:16-alpine");
-    @Container
-    public static GenericContainer<?> redisContainer = new GenericContainer<>("redis:7-alpine");
-
     @MockBean
     private SettingRepository settingRepository;
 
@@ -56,12 +51,7 @@ public class SettingServiceTest {
         settingDTO.setSettingValue("My Application");
     }
 
-    @AfterEach
-    void tearDown() {
-        if (postgreSQLContainer != null && postgreSQLContainer.isRunning()) {
-            postgreSQLContainer.close();
-        }
-    }
+
 
     @Test
     void testCreateSetting() {

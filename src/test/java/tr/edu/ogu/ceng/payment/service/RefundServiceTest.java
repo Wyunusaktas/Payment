@@ -32,11 +32,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(SpringExtension.class)
 public class RefundServiceTest {
 
-    @Container
-    public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:16-alpine");
-    @Container
-    public static GenericContainer<?> redisContainer = new GenericContainer<>("redis:7-alpine");
-
     @MockBean
     private RefundRepository refundRepository;
 
@@ -59,13 +54,6 @@ public class RefundServiceTest {
         refundDTO.setStatus("Pending");
         refundDTO.setRefundDate(LocalDateTime.now());
         refundDTO.setRefundMethod("Bank Transfer");
-    }
-
-    @AfterEach
-    void tearDown() {
-        if (postgreSQLContainer != null && postgreSQLContainer.isRunning()) {
-            postgreSQLContainer.close();
-        }
     }
 
     @Test

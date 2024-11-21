@@ -31,11 +31,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(SpringExtension.class)
 public class ThirdPartyPaymentServiceTest {
 
-    @Container
-    public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:16-alpine");
-    @Container
-    public static GenericContainer<?> redisContainer = new GenericContainer<>("redis:7-alpine");
-
     @MockBean
     private ThirdPartyPaymentRepository thirdPartyPaymentRepository;
 
@@ -59,12 +54,6 @@ public class ThirdPartyPaymentServiceTest {
         thirdPartyPaymentDTO.setProcessedAt(LocalDateTime.now());
     }
 
-    @AfterEach
-    void tearDown() {
-        if (postgreSQLContainer != null && postgreSQLContainer.isRunning()) {
-            postgreSQLContainer.close();
-        }
-    }
 
     @Test
     void testCreateThirdPartyPayment() {

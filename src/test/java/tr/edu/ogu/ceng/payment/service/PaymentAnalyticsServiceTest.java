@@ -32,11 +32,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(SpringExtension.class)
 public class PaymentAnalyticsServiceTest {
 
-    @Container
-    public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:16-alpine");
-    @Container
-    public static GenericContainer<?> redisContainer = new GenericContainer<>("redis:7-alpine");
-
     @MockBean
     private PaymentAnalyticsRepository paymentAnalyticsRepository;
 
@@ -62,13 +57,6 @@ public class PaymentAnalyticsServiceTest {
         paymentAnalytics.setReportingDate(LocalDateTime.now());
 
         paymentAnalyticsDTO = modelMapper.map(paymentAnalytics, PaymentAnalyticsDTO.class);
-    }
-
-    @AfterEach
-    void tearDown() {
-        if (postgreSQLContainer != null && postgreSQLContainer.isRunning()) {
-            postgreSQLContainer.close();
-        }
     }
 
     @Test

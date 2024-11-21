@@ -31,11 +31,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(SpringExtension.class)
 public class SessionServiceTest {
 
-    @Container
-    public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:16-alpine");
-    @Container
-    public static GenericContainer<?> redisContainer = new GenericContainer<>("redis:7-alpine");
-
     @MockBean
     private SessionRepository sessionRepository;
 

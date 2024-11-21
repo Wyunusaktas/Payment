@@ -33,11 +33,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(SpringExtension.class)
 public class TransactionServiceTest {
 
-    @Container
-    public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:16-alpine");
-    @Container
-    public static GenericContainer<?> redisContainer = new GenericContainer<>("redis:7-alpine");
-
     @MockBean
     private TransactionRepository transactionRepository;
 
@@ -61,12 +56,6 @@ public class TransactionServiceTest {
         transactionDTO.setAmount(new BigDecimal("150.50"));
     }
 
-    @AfterEach
-    void tearDown() {
-        if (postgreSQLContainer != null && postgreSQLContainer.isRunning()) {
-            postgreSQLContainer.close();
-        }
-    }
 
     @Test
     void testCreateTransaction() {

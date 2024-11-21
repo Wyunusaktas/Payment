@@ -33,11 +33,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(SpringExtension.class)
 public class ErrorLogServiceTest {
 
-    @Container
-    public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:16-alpine");
-    @Container
-    public static GenericContainer<?> redisContainer = new GenericContainer<>("redis:7-alpine");
-
     @MockBean
     private ErrorLogRepository errorLogRepository;
 
@@ -64,12 +59,6 @@ public class ErrorLogServiceTest {
         errorLogDTO = modelMapper.map(errorLog, ErrorLogDTO.class);
     }
 
-    @AfterEach
-    void tearDown() {
-        if (postgreSQLContainer != null && postgreSQLContainer.isRunning()) {
-            postgreSQLContainer.close();
-        }
-    }
 
     @Test
     void testCreateErrorLog() {

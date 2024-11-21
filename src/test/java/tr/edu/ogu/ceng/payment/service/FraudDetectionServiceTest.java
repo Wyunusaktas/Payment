@@ -33,11 +33,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(SpringExtension.class)
 public class FraudDetectionServiceTest {
 
-    @Container
-    public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:16-alpine");
-    @Container
-    public static GenericContainer<?> redisContainer = new GenericContainer<>("redis:7-alpine");
-
     @MockBean
     private FraudDetectionRepository fraudDetectionRepository;
 
@@ -65,12 +60,6 @@ public class FraudDetectionServiceTest {
         fraudDetectionDTO = modelMapper.map(fraudDetection, FraudDetectionDTO.class);
     }
 
-    @AfterEach
-    void tearDown() {
-        if (postgreSQLContainer != null && postgreSQLContainer.isRunning()) {
-            postgreSQLContainer.close();
-        }
-    }
 
     @Test
     void testCreateFraudDetection() {

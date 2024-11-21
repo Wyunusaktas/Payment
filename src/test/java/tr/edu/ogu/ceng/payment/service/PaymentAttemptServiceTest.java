@@ -33,11 +33,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(SpringExtension.class)
 public class PaymentAttemptServiceTest {
 
-    @Container
-    public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:16-alpine");
-    @Container
-    public static GenericContainer<?> redisContainer = new GenericContainer<>("redis:7-alpine");
-
     @MockBean
     private PaymentAttemptRepository paymentAttemptRepository;
 
@@ -63,13 +58,6 @@ public class PaymentAttemptServiceTest {
         paymentAttempt.setErrorMessage(null);
 
         paymentAttemptDTO = modelMapper.map(paymentAttempt, PaymentAttemptDTO.class);
-    }
-
-    @AfterEach
-    void tearDown() {
-        if (postgreSQLContainer != null && postgreSQLContainer.isRunning()) {
-            postgreSQLContainer.close();
-        }
     }
 
     @Test

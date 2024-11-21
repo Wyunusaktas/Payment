@@ -33,11 +33,6 @@ import static org.mockito.Mockito.*;
 @ActiveProfiles("test")
 public class AuditLogServiceTest {
 
-    @Container
-    public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:16-alpine");
-    @Container
-    public static GenericContainer<?> redisContainer = new GenericContainer<>("redis:7-alpine");
-
     @MockBean
     private AuditLogRepository auditLogRepository;
 
@@ -64,12 +59,7 @@ public class AuditLogServiceTest {
         auditLogDTO = modelMapper.map(auditLog, AuditLogDTO.class);
     }
 
-    @AfterEach
-    void tearDown() {
-        if (postgreSQLContainer != null && postgreSQLContainer.isRunning()) {
-            postgreSQLContainer.close();
-        }
-    }
+
 
     @Test
     void testCreateAuditLog() {
