@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: Payment
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ilerijava
+    username: devuser
+    password: devpassword
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baselineOnMigrate: true
+
+microservices:
+  user: http://localhost:8007
+  order: http://localhost:8003
+  gateway: http://localhost:8001
+  payment: http://localhost:8006
+  product: http://localhost:8002
+  invoice: http://localhost:8008
+  notification: http://localhost:8004
+  cart: http://localhost:8005
+  shipping: http://localhost:8011
+
+server:
+  port: 8006
+
