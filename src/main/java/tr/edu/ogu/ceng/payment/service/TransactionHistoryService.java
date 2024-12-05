@@ -5,21 +5,17 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import tr.edu.ogu.ceng.payment.entity.TransactionHistory;
 import tr.edu.ogu.ceng.payment.repository.TransactionHistoryRepository;
 
+@RequiredArgsConstructor
 @Service
 public class TransactionHistoryService {
 
     private final TransactionHistoryRepository transactionHistoryRepository;
-
-    @Autowired
-    public TransactionHistoryService(TransactionHistoryRepository transactionHistoryRepository) {
-        this.transactionHistoryRepository = transactionHistoryRepository;
-    }
 
     // Kullanıcıya ait tüm işlem geçmişini getirir
     public List<TransactionHistory> getTransactionHistoryByUserId(UUID userId) {

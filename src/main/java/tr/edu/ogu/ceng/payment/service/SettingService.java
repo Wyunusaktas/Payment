@@ -1,27 +1,37 @@
 package tr.edu.ogu.ceng.payment.service;
 
+import java.awt.PageAttributes;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.SecurityProperties;
+import org.springframework.http.MediaType;
+
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 
 import tr.edu.ogu.ceng.payment.entity.Setting;
 import tr.edu.ogu.ceng.payment.repository.SettingRepository;
-
+import tr.edu.ogu.ceng.payment.User;
+@RequiredArgsConstructor
 @Service
 public class SettingService {
-
     private final SettingRepository settingRepository;
+      private final RestClient restClient;
 
-    @Autowired
-    public SettingService(SettingRepository settingRepository) {
-        this.settingRepository = settingRepository;
+    public Optional<Setting> getSettingByKey(String settingKey) {
+      
+        return settingRepository.findBySettingKey(settingKey);
     }
 
-    // Anahtar ile bir ayarı getirir
-    public Optional<Setting> getSettingByKey(String settingKey) {
-        return settingRepository.findBySettingKey(settingKey);
+    public User getUser() {
+        return restClient.get()
+                .uri("http://192.168.137.195:8007/api/users/testuser")
+                .accept(MediaType.APPLICATION_JSON)
+                .retrieve()
+                .body(User.class);
     }
 
     // Anahtar ile ayarın var olup olmadığını kontrol eder

@@ -5,21 +5,17 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import tr.edu.ogu.ceng.payment.entity.Refund;
 import tr.edu.ogu.ceng.payment.repository.RefundRepository;
 
+@RequiredArgsConstructor
 @Service
 public class RefundService {
 
     private final RefundRepository refundRepository;
-
-    @Autowired
-    public RefundService(RefundRepository refundRepository) {
-        this.refundRepository = refundRepository;
-    }
 
     // Belirli bir ödeme ID'sine ait iadeleri getirir
     public List<Refund> getRefundsByPaymentId(UUID paymentId) {

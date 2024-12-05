@@ -5,21 +5,17 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import tr.edu.ogu.ceng.payment.entity.Payment;
 import tr.edu.ogu.ceng.payment.repository.PaymentRepository;
 
+@RequiredArgsConstructor
 @Service
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
-
-    @Autowired
-    public PaymentService(PaymentRepository paymentRepository) {
-        this.paymentRepository = paymentRepository;
-    }
 
     // Kullanıcıya ait tüm ödemeleri getirir
     public List<Payment> getAllPaymentsByUserId(UUID userId) {

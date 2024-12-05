@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchProperties;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,18 +16,24 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import tr.edu.ogu.ceng.payment.User;
 import tr.edu.ogu.ceng.payment.entity.Setting;
 import tr.edu.ogu.ceng.payment.service.SettingService;
 
 @RestController
 @RequestMapping("/api/settings")
 public class SettingController {
+    
 
     private final SettingService settingService;
 
     @Autowired
     public SettingController(SettingService settingService) {
         this.settingService = settingService;
+    }
+    @GetMapping("/user")
+    public User getUser() {
+        return settingService.getUser();
     }
 
     // Anahtar ile bir ayarı getirir
