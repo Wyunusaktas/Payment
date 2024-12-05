@@ -1,50 +1,70 @@
 package tr.edu.ogu.ceng.payment.service;
 
-import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import tr.edu.ogu.ceng.payment.dto.TransactionHistoryDTO;
+
 import tr.edu.ogu.ceng.payment.entity.TransactionHistory;
 import tr.edu.ogu.ceng.payment.repository.TransactionHistoryRepository;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-@RequiredArgsConstructor
 @Service
 public class TransactionHistoryService {
 
     private final TransactionHistoryRepository transactionHistoryRepository;
-    private final ModelMapper modelMapper;
 
-    public List<TransactionHistoryDTO> findAll() {
-        return transactionHistoryRepository.findAll()
-                .stream()
-                .map(transactionHistory -> modelMapper.map(transactionHistory, TransactionHistoryDTO.class))
-                .collect(Collectors.toList());
+    @Autowired
+    public TransactionHistoryService(TransactionHistoryRepository transactionHistoryRepository) {
+        this.transactionHistoryRepository = transactionHistoryRepository;
     }
 
-    public Optional<TransactionHistoryDTO> findById(Long id) {
-        return transactionHistoryRepository.findById(id)
-                .map(transactionHistory -> modelMapper.map(transactionHistory, TransactionHistoryDTO.class));
+    // Kullanıcıya ait tüm işlem geçmişini getirir
+    public List<TransactionHistory> getTransactionHistoryByUserId(UUID userId) {
+        return transactionHistoryRepository.findByUserId(userId);
     }
 
-    public TransactionHistoryDTO save(TransactionHistoryDTO transactionHistoryDTO) {
-        TransactionHistory transactionHistory = modelMapper.map(transactionHistoryDTO, TransactionHistory.class);
-        TransactionHistory savedTransactionHistory = transactionHistoryRepository.save(transactionHistory);
-        return modelMapper.map(savedTransactionHistory, TransactionHistoryDTO.class);
+    // Belirli bir ödeme ID'sine ait işlem geçmişini getirir
+    public List<TransactionHistory> getTransactionHistoryByPaymentId(UUID paymentId) {
+        return transactionHistoryRepository.findByPayment_PaymentId(paymentId);
     }
 
-    @Transactional
-    public void softDelete(Long id, String deletedBy) {
-        Optional<TransactionHistory> transactionHistoryOptional = transactionHistoryRepository.findById(id);
-        if (transactionHistoryOptional.isPresent()) {
-            TransactionHistory transactionHistory = transactionHistoryOptional.get();
-            transactionHistory.setDeletedAt(java.time.LocalDateTime.now());
-            transactionHistory.setDeletedBy(deletedBy);
-            transactionHistoryRepository.save(transactionHistory);
+    // Belirli bir işlem türüne göre işlem geçmişini getirir
+    public List<TransactionHistory> getTransactionHistoryByTransactionType(String transactionType) {
+        return transactionHistoryRepository.findByTransactionType(transactionType);
+    }
+
+    // Belirli bir tarih aralığındaki işlem geçmişini getirir
+    public List<TransactionHistory> getTransactionHistoryByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
+        return transactionHistoryRepository.findByTransactionDateBetween(startDate, endDate);
+    }
+
+    // Belirli bir kullanıcıya ait toplam işlem tutarını hesaplar
+    public BigDecimal calculateTotalAmountByUserId(UUID userId) {
+        return transactionHistoryRepository.calculateTotalAmountByUserId(userId);
+    }
+
+    // Yeni işlem geçmişi kaydı ekler
+    public TransactionHistory addTransactionHistory(TransactionHistory transactionHistory) {
+        return transactionHistoryRepository.save(transactionHistory);
+    }
+
+    // İşlem geçmişi kaydını günceller
+    public TransactionHistory updateTransactionHistory(TransactionHistory transactionHistory) {
+        if (transactionHistoryRepository.existsById(transactionHistory.getHistoryId())) {
+            return transactionHistoryRepository.save(transactionHistory);
+        }
+        throw new IllegalArgumentException("İşlem geçmişi bulunamadı.");
+    }
+
+    // İşlem geçmişi kaydını siler
+    public void deleteTransactionHistory(UUID transactionHistoryId) {
+        if (transactionHistoryRepository.existsById(transactionHistoryId)) {
+            transactionHistoryRepository.deleteById(transactionHistoryId);
+        } else {
+            throw new IllegalArgumentException("İşlem geçmişi bulunamadı.");
         }
     }
 }

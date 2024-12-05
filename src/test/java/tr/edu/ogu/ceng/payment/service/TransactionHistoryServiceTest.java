@@ -1,162 +1,219 @@
 package tr.edu.ogu.ceng.payment.service;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.dto.TransactionHistoryDTO;
-import tr.edu.ogu.ceng.payment.entity.TransactionHistory;
-import tr.edu.ogu.ceng.payment.repository.TransactionHistoryRepository;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.MockitoAnnotations;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
-@ExtendWith(SpringExtension.class)
+import tr.edu.ogu.ceng.payment.entity.Payment;
+import tr.edu.ogu.ceng.payment.entity.TransactionHistory;
+import tr.edu.ogu.ceng.payment.repository.TransactionHistoryRepository;
+
 public class TransactionHistoryServiceTest {
 
-    @MockBean
+    @Mock
     private TransactionHistoryRepository transactionHistoryRepository;
 
-    @Autowired
+    @InjectMocks
     private TransactionHistoryService transactionHistoryService;
 
-    @Autowired
-    private ModelMapper modelMapper;
-
-    private TransactionHistoryDTO transactionHistoryDTO;
+    private TransactionHistory transactionHistory;
+    private UUID userId;
+    private UUID paymentId;
+    private UUID historyId;
 
     @BeforeEach
-    void setUp() {
-        reset(transactionHistoryRepository);
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);  // Mockito mocks'larını başlat
 
-        transactionHistoryDTO = new TransactionHistoryDTO();
-        transactionHistoryDTO.setHistoryId(1L);
-        transactionHistoryDTO.setUserId(UUID.randomUUID());
-        transactionHistoryDTO.setTransactionType("PURCHASE");
-        transactionHistoryDTO.setAmount(new BigDecimal("200.00"));
-        transactionHistoryDTO.setTransactionDate(LocalDateTime.now());
-        transactionHistoryDTO.setStatus("COMPLETED");
+        // UUID ve Payment nesnelerini oluştur
+        userId = UUID.randomUUID();
+        paymentId = UUID.randomUUID();
+
+        Payment payment = new Payment();
+        payment.setUserId(userId);
+        payment.setAmount(BigDecimal.valueOf(100.00));
+        payment.setStatus("COMPLETED");
+        payment.setTransactionDate(LocalDateTime.now());  // Ensure this is within the range
+        payment.setDescription("Test Payment");
+        payment.setRecurring(false);
+        payment.setPaymentChannel("Online");
+
+
+        // TransactionHistory nesnesini oluştur
+        transactionHistory = new TransactionHistory();
+        transactionHistory.setUserId(userId);
+        transactionHistory.setPayment(payment);  // Payment objesini ilişkilendir
+        transactionHistory.setTransactionType("WITHDRAWAL");
+        transactionHistory.setAmount(BigDecimal.valueOf(50.00));
+        transactionHistory.setTransactionDate(LocalDateTime.now());  // Ensure this is within the range
+        transactionHistory.setStatus("COMPLETED");
+        historyId = transactionHistory.getHistoryId();  // historyId'yi set et
+
+        // Repository metodu için mocklar
+        when(transactionHistoryRepository.findByUserId(userId)).thenReturn(List.of(transactionHistory));
+        when(transactionHistoryRepository.findByPayment_PaymentId(paymentId)).thenReturn(List.of(transactionHistory));
+        when(transactionHistoryRepository.findByTransactionType("WITHDRAWAL")).thenReturn(List.of(transactionHistory));
+        when(transactionHistoryRepository.calculateTotalAmountByUserId(userId)).thenReturn(BigDecimal.valueOf(1000.00));
+        when(transactionHistoryRepository.save(transactionHistory)).thenReturn(transactionHistory);
+        when(transactionHistoryRepository.existsById(historyId)).thenReturn(true);
     }
 
     @Test
-    void testCreateTransactionHistory() {
-        TransactionHistory transactionHistory = modelMapper.map(transactionHistoryDTO, TransactionHistory.class);
-        when(transactionHistoryRepository.save(any(TransactionHistory.class))).thenReturn(transactionHistory);
+    public void testGetTransactionHistoryByUserId() {
+        // Servis metodu çağrılır
+        List<TransactionHistory> result = transactionHistoryService.getTransactionHistoryByUserId(userId);
 
-        TransactionHistoryDTO createdTransactionHistoryDTO = transactionHistoryService.save(transactionHistoryDTO);
-
-        assertNotNull(createdTransactionHistoryDTO, "TransactionHistory creation failed, returned object is null.");
-        assertEquals(transactionHistoryDTO.getStatus(), createdTransactionHistoryDTO.getStatus());
-        verify(transactionHistoryRepository, times(1)).save(any(TransactionHistory.class));
+        // Assert: Sonuçların doğru olup olmadığını kontrol et
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals(userId, result.get(0).getUserId());
     }
 
     @Test
-    void testFindTransactionHistoryById_NotFound() {
-        when(transactionHistoryRepository.findById(anyLong())).thenReturn(Optional.empty());
+    public void testGetTransactionHistoryByPaymentId() {
+        // String paymentId'yi UUID'ye çevir
+        String paymentIdString = "b0f3d28f-4de8-4677-87a2-4f42335ec95d";
+        UUID paymentId = UUID.fromString(paymentIdString);  // String'i UUID'ye çevir
+    
+        // Test verisi için TransactionHistory nesnesi oluştur
+        TransactionHistory transactionHistory = new TransactionHistory();
+        transactionHistory.setPayment(new Payment());
+        transactionHistory.getPayment().setPaymentId(paymentId);  // UUID'yi set et
+        transactionHistory.setTransactionType("WITHDRAWAL");
+        transactionHistory.setAmount(BigDecimal.valueOf(50.00));
+        transactionHistory.setTransactionDate(LocalDateTime.now());
+        transactionHistory.setStatus("COMPLETED");
+    
+        // Mock: paymentId ile işlem geçmişini döndüren metodu mockla
+        when(transactionHistoryRepository.findByPayment_PaymentId(paymentId)).thenReturn(List.of(transactionHistory));
+    
+        // Servis metodu çağrılır
+        List<TransactionHistory> result = transactionHistoryService.getTransactionHistoryByPaymentId(paymentId);
+    
+        // Assert: Sonuçların doğru olup olmadığını kontrol et
+        assertNotNull(result);  // Sonucun null olmaması gerektiğini kontrol et
+        assertEquals(1, result.size());  // Liste boyutunun 1 olduğunu doğrula
+        assertEquals(paymentId, result.get(0).getPayment().getPaymentId());  // paymentId'nin doğru olduğunu kontrol et
+    }
+    
 
-        Optional<TransactionHistoryDTO> foundTransactionHistoryDTO = transactionHistoryService.findById(999L);
+    @Test
+    public void testGetTransactionHistoryByTransactionType() {
+        // Servis metodu çağrılır
+        List<TransactionHistory> result = transactionHistoryService.getTransactionHistoryByTransactionType("WITHDRAWAL");
 
-        assertFalse(foundTransactionHistoryDTO.isPresent(), "TransactionHistory should not be found.");
-        verify(transactionHistoryRepository, times(1)).findById(999L);
+        // Assert: Sonuçların doğru olup olmadığını kontrol et
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("WITHDRAWAL", result.get(0).getTransactionType());
     }
 
     @Test
-    void testFindTransactionHistoryById() {
-        TransactionHistory transactionHistory = modelMapper.map(transactionHistoryDTO, TransactionHistory.class);
-        when(transactionHistoryRepository.findById(transactionHistoryDTO.getHistoryId())).thenReturn(Optional.of(transactionHistory));
+    public void testGetTransactionHistoryByDateRange() {
+        // Mock: Tarih aralığına göre işlem geçmişini döndüren metodu mockla
+        LocalDateTime startDate = LocalDateTime.now().minusDays(1);  // Testin geçerli tarih aralığı
+        LocalDateTime endDate = LocalDateTime.now().plusDays(1);
+    
+        // TransactionHistory nesnesi oluştur ve tarih aralığını belirle
+        TransactionHistory transactionHistory = new TransactionHistory();
+        transactionHistory.setUserId(userId);
+        transactionHistory.setPayment(new Payment());  // Payment nesnesini ilişkilendir
+        transactionHistory.setTransactionType("WITHDRAWAL");
+        transactionHistory.setAmount(BigDecimal.valueOf(50.00));
+        transactionHistory.setTransactionDate(LocalDateTime.now());  // Bu tarih aralığı içinde olmalı
+        transactionHistory.setStatus("COMPLETED");
+    
+        // Mock: Belirtilen tarih aralığındaki işlem geçmişini döndür
+        when(transactionHistoryRepository.findByTransactionDateBetween(startDate, endDate)).thenReturn(List.of(transactionHistory));
+    
+        // Servis metodu çağrılır
+        List<TransactionHistory> result = transactionHistoryService.getTransactionHistoryByDateRange(startDate, endDate);
+    
+        // Assert: Sonuçların doğru olup olmadığını kontrol et
+        assertNotNull(result);
+        assertEquals(1, result.size());  // Beklenen sonucun 1 olması gerektiğini doğrula
+        assertTrue(result.get(0).getTransactionDate().isAfter(startDate) && result.get(0).getTransactionDate().isBefore(endDate));
+    }
+    
 
-        Optional<TransactionHistoryDTO> foundTransactionHistoryDTO = transactionHistoryService.findById(transactionHistoryDTO.getHistoryId());
+    @Test
+    public void testCalculateTotalAmountByUserId() {
+        // Servis metodu çağrılır
+        BigDecimal totalAmount = transactionHistoryService.calculateTotalAmountByUserId(userId);
 
-        assertTrue(foundTransactionHistoryDTO.isPresent(), "TransactionHistory not found.");
-        assertEquals(transactionHistoryDTO.getStatus(), foundTransactionHistoryDTO.get().getStatus());
-        verify(transactionHistoryRepository, times(1)).findById(transactionHistoryDTO.getHistoryId());
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertNotNull(totalAmount);
+        assertEquals(BigDecimal.valueOf(1000.00), totalAmount);
     }
 
     @Test
-    void testUpdateTransactionHistory() {
-        transactionHistoryDTO.setStatus("UPDATED");
-        TransactionHistory updatedTransactionHistory = modelMapper.map(transactionHistoryDTO, TransactionHistory.class);
+    public void testAddTransactionHistory() {
+        // Servis metodu çağrılır
+        TransactionHistory result = transactionHistoryService.addTransactionHistory(transactionHistory);
 
-        when(transactionHistoryRepository.save(any(TransactionHistory.class))).thenReturn(updatedTransactionHistory);
-
-        TransactionHistoryDTO updatedTransactionHistoryDTO = transactionHistoryService.save(transactionHistoryDTO);
-
-        assertNotNull(updatedTransactionHistoryDTO, "TransactionHistory update failed, returned object is null.");
-        assertEquals("UPDATED", updatedTransactionHistoryDTO.getStatus(), "TransactionHistory status did not update correctly.");
-        verify(transactionHistoryRepository, times(1)).save(any(TransactionHistory.class));
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertNotNull(result);
+        assertEquals(transactionHistory.getHistoryId(), result.getHistoryId());
     }
 
     @Test
-    void testSoftDeleteTransactionHistory() {
-        TransactionHistory transactionHistory = modelMapper.map(transactionHistoryDTO, TransactionHistory.class);
-        ArgumentCaptor<TransactionHistory> captor = ArgumentCaptor.forClass(TransactionHistory.class);
+    public void testUpdateTransactionHistory() {
+        // Servis metodu çağrılır
+        TransactionHistory result = transactionHistoryService.updateTransactionHistory(transactionHistory);
 
-        when(transactionHistoryRepository.findById(transactionHistoryDTO.getHistoryId())).thenReturn(Optional.of(transactionHistory));
-        when(transactionHistoryRepository.save(any(TransactionHistory.class))).thenReturn(transactionHistory);
-
-        transactionHistoryService.softDelete(transactionHistoryDTO.getHistoryId(), "testUser");
-
-        verify(transactionHistoryRepository, times(1)).findById(transactionHistoryDTO.getHistoryId());
-        verify(transactionHistoryRepository, times(1)).save(captor.capture());
-
-        TransactionHistory softDeletedTransactionHistory = captor.getValue();
-        assertNotNull(softDeletedTransactionHistory.getDeletedAt(), "DeletedAt should not be null after soft delete.");
-        assertEquals("testUser", softDeletedTransactionHistory.getDeletedBy(), "DeletedBy should match the given user.");
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertNotNull(result);
+        assertEquals(transactionHistory.getHistoryId(), result.getHistoryId());
     }
 
     @Test
-    void testSoftDeleteTransactionHistory_NotFound() {
-        when(transactionHistoryRepository.findById(anyLong())).thenReturn(Optional.empty());
+    public void testUpdateTransactionHistoryNotFound() {
+        // İşlem geçmişi kaydının bulunmadığını belirt
+        when(transactionHistoryRepository.existsById(historyId)).thenReturn(false);
 
-        transactionHistoryService.softDelete(999L, "testUser");
+        // Servis metodu çağrılır ve exception fırlatılır
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            transactionHistoryService.updateTransactionHistory(transactionHistory);
+        });
 
-        verify(transactionHistoryRepository, times(1)).findById(999L);
-        verify(transactionHistoryRepository, never()).save(any(TransactionHistory.class));
+        // Assert: Hata mesajının doğru olup olmadığını kontrol et
+        assertEquals("İşlem geçmişi bulunamadı.", exception.getMessage());
     }
 
     @Test
-    void testFindAllTransactionHistories() {
-        TransactionHistory transactionHistory = modelMapper.map(transactionHistoryDTO, TransactionHistory.class);
-        when(transactionHistoryRepository.findAll()).thenReturn(List.of(transactionHistory));
+    public void testDeleteTransactionHistory() {
+        // Servis metodu çağrılır
+        transactionHistoryService.deleteTransactionHistory(historyId);
 
-        List<TransactionHistoryDTO> transactionHistoryDTOList = transactionHistoryService.findAll();
-
-        assertNotNull(transactionHistoryDTOList, "TransactionHistory list is null.");
-        assertFalse(transactionHistoryDTOList.isEmpty(), "TransactionHistory list is empty.");
-        assertEquals(1, transactionHistoryDTOList.size(), "TransactionHistory list size mismatch.");
-        verify(transactionHistoryRepository, times(1)).findAll();
+        // Veritabanı erişimi kontrolü yapılır
+        verify(transactionHistoryRepository, times(1)).deleteById(historyId);
     }
 
     @Test
-    void testFindByIdReturnsTransactionHistory() {
-        TransactionHistory history = new TransactionHistory();
-        history.setStatus("SUCCESS");
-        when(transactionHistoryRepository.findById(1L)).thenReturn(Optional.of(history));
+    public void testDeleteTransactionHistoryNotFound() {
+        // İşlem geçmişi kaydının mevcut olmadığını belirt
+        when(transactionHistoryRepository.existsById(historyId)).thenReturn(false);
 
-        Optional<TransactionHistoryDTO> result = transactionHistoryService.findById(1L);
+        // Servis metodu çağrılır ve exception fırlatılır
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            transactionHistoryService.deleteTransactionHistory(historyId);
+        });
 
-        assertTrue(result.isPresent(), "findById should return a transaction history when the ID is valid");
-        assertEquals("SUCCESS", result.get().getStatus(), "Status should match");
+        // Assert: Hata mesajının doğru olup olmadığını kontrol et
+        assertEquals("İşlem geçmişi bulunamadı.", exception.getMessage());
     }
-
-
 }

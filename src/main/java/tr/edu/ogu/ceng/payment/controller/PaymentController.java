@@ -1,99 +1,127 @@
 package tr.edu.ogu.ceng.payment.controller;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import tr.edu.ogu.ceng.payment.dto.PaymentDTO;
-import tr.edu.ogu.ceng.payment.service.PaymentService;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import tr.edu.ogu.ceng.payment.entity.Payment;
+import tr.edu.ogu.ceng.payment.service.PaymentService;
+
 @RestController
-@RequiredArgsConstructor
-@RequestMapping("/api/v1/payments")
+@RequestMapping("/api/payments")
 public class PaymentController {
 
     private final PaymentService paymentService;
 
-    // Mevcut endpoint'ler korundu
-    // ...
+    @Autowired
+    public PaymentController(PaymentService paymentService) {
+        this.paymentService = paymentService;
+    }
 
-    // Yeni endpoint'ler eklendi
+    // Kullanıcıya ait tüm ödemeleri getirir
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<PaymentDTO>> getPaymentsByUser(@PathVariable UUID userId) {
-        return ResponseEntity.ok(paymentService.findPaymentsByUser(userId));
+    public ResponseEntity<List<Payment>> getAllPaymentsByUserId(@PathVariable UUID userId) {
+        List<Payment> payments = paymentService.getAllPaymentsByUserId(userId);
+        return payments.isEmpty() ? 
+            new ResponseEntity<>(HttpStatus.NO_CONTENT) : 
+            new ResponseEntity<>(payments, HttpStatus.OK);
     }
 
+    // Ödeme durumuna göre ödemeleri getirir
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<PaymentDTO>> getPaymentsByStatus(@PathVariable String status) {
-        return ResponseEntity.ok(paymentService.findPaymentsByStatus(status));
+    public ResponseEntity<List<Payment>> getPaymentsByStatus(@PathVariable String status) {
+        List<Payment> payments = paymentService.getPaymentsByStatus(status);
+        return payments.isEmpty() ? 
+            new ResponseEntity<>(HttpStatus.NO_CONTENT) : 
+            new ResponseEntity<>(payments, HttpStatus.OK);
     }
 
-    @GetMapping("/date-range")
-    public ResponseEntity<List<PaymentDTO>> getPaymentsByDateRange(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
-        return ResponseEntity.ok(paymentService.findPaymentsByDateRange(startDate, endDate));
-    }
-
-    @GetMapping("/amount-above/{amount}")
-    public ResponseEntity<List<PaymentDTO>> getPaymentsAboveAmount(@PathVariable BigDecimal amount) {
-        return ResponseEntity.ok(paymentService.findPaymentsAboveAmount(amount));
-    }
-
+    // PaymentMethod ile ödeme işlemlerini getirir (methodId)
     @GetMapping("/method/{methodId}")
-    public ResponseEntity<List<PaymentDTO>> getPaymentsByMethod(@PathVariable Long methodId) {
-        return ResponseEntity.ok(paymentService.findPaymentsByMethod(methodId));
+    public ResponseEntity<List<Payment>> getPaymentsByPaymentMethod(@PathVariable UUID methodId) {
+        List<Payment> payments = paymentService.getPaymentsByPaymentMethod(methodId);
+        return payments.isEmpty() ? 
+            new ResponseEntity<>(HttpStatus.NO_CONTENT) : 
+            new ResponseEntity<>(payments, HttpStatus.OK);
     }
 
-    @GetMapping("/recurring")
-    public ResponseEntity<List<PaymentDTO>> getRecurringPayments() {
-        return ResponseEntity.ok(paymentService.findRecurringPayments());
+    // Belirli bir tarih aralığındaki ödemeleri getirir
+    @GetMapping("/date-range")
+    public ResponseEntity<List<Payment>> getPaymentsByDateRange(
+            @RequestParam LocalDateTime startDate, 
+            @RequestParam LocalDateTime endDate) {
+        List<Payment> payments = paymentService.getPaymentsByDateRange(startDate, endDate);
+        return payments.isEmpty() ? 
+            new ResponseEntity<>(HttpStatus.NO_CONTENT) : 
+            new ResponseEntity<>(payments, HttpStatus.OK);
     }
 
-    @GetMapping("/discounted")
-    public ResponseEntity<List<PaymentDTO>> getDiscountedPayments() {
-        return ResponseEntity.ok(paymentService.findDiscountedPayments());
+    // Kullanıcıya ait belirli bir tarih aralığındaki ödemeleri getirir
+    @GetMapping("/user/{userId}/date-range")
+    public ResponseEntity<List<Payment>> getPaymentsByUserIdAndDateRange(
+            @PathVariable UUID userId,
+            @RequestParam LocalDateTime startDate,
+            @RequestParam LocalDateTime endDate) {
+        List<Payment> payments = paymentService.getPaymentsByUserIdAndDateRange(userId, startDate, endDate);
+        return payments.isEmpty() ? 
+            new ResponseEntity<>(HttpStatus.NO_CONTENT) : 
+            new ResponseEntity<>(payments, HttpStatus.OK);
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<List<PaymentDTO>> searchPayments(
-            @RequestParam String status,
-            @RequestParam BigDecimal minAmount,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate) {
-        return ResponseEntity.ok(paymentService.findPaymentsByStatusAmountAndDate(status, minAmount, startDate));
+    // Tüm ödemelerin toplam tutarını hesaplar
+    @GetMapping("/total-amount")
+    public ResponseEntity<BigDecimal> calculateTotalAmount() {
+        BigDecimal totalAmount = paymentService.calculateTotalAmount();
+        return new ResponseEntity<>(totalAmount, HttpStatus.OK);
     }
 
-    @GetMapping("/provider/{provider}/completed")
-    public ResponseEntity<List<PaymentDTO>> getCompletedPaymentsByProvider(@PathVariable String provider) {
-        return ResponseEntity.ok(paymentService.findCompletedPaymentsByProvider(provider));
+    // Belirli bir durumdaki ödemelerin toplam tutarını hesaplar
+    @GetMapping("/total-amount/status/{status}")
+    public ResponseEntity<BigDecimal> calculateTotalAmountByStatus(@PathVariable String status) {
+        BigDecimal totalAmount = paymentService.calculateTotalAmountByStatus(status);
+        return new ResponseEntity<>(totalAmount, HttpStatus.OK);
     }
 
-    @GetMapping("/user/{userId}/total")
-    public ResponseEntity<BigDecimal> getTotalPaymentAmountByUser(@PathVariable UUID userId) {
-        return ResponseEntity.ok(paymentService.calculateTotalPaymentAmountByUser(userId));
+    // Yeni ödeme kaydı ekler
+    @PostMapping
+    public ResponseEntity<Payment> addPayment(@RequestBody Payment payment) {
+        Payment savedPayment = paymentService.addPayment(payment);
+        return new ResponseEntity<>(savedPayment, HttpStatus.CREATED);
     }
 
-    @GetMapping("/user/{userId}/last")
-    public ResponseEntity<PaymentDTO> getLastPaymentByUser(@PathVariable UUID userId) {
-        return paymentService.findLastPaymentByUser(userId)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    // Ödeme kaydını günceller
+    @PutMapping
+    public ResponseEntity<Payment> updatePayment(@RequestBody Payment payment) {
+        try {
+            Payment updatedPayment = paymentService.updatePayment(payment);
+            return new ResponseEntity<>(updatedPayment, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 
-    @GetMapping("/successful")
-    public ResponseEntity<List<PaymentDTO>> getSuccessfulPayments(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
-        return ResponseEntity.ok(paymentService.findSuccessfulPaymentsInPeriod(startDate, endDate));
-    }
-
-    @GetMapping("/high-value")
-    public ResponseEntity<List<PaymentDTO>> getHighValuePayments() {
-        return ResponseEntity.ok(paymentService.findHighValuePayments());
+    // Ödeme kaydını siler
+    @DeleteMapping("/{paymentId}")
+    public ResponseEntity<Void> deletePayment(@PathVariable UUID paymentId) {
+        try {
+            paymentService.deletePayment(paymentId);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 }

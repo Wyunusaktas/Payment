@@ -1,164 +1,176 @@
 package tr.edu.ogu.ceng.payment.service;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.dto.PaymentMethodDTO;
-import tr.edu.ogu.ceng.payment.entity.PaymentMethod;
-import tr.edu.ogu.ceng.payment.repository.PaymentMethodRepository;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.MockitoAnnotations;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
-@ExtendWith(SpringExtension.class)
+import tr.edu.ogu.ceng.payment.entity.PaymentMethod;
+import tr.edu.ogu.ceng.payment.repository.PaymentMethodRepository;
+
 public class PaymentMethodServiceTest {
 
-    @MockBean
+    @Mock
     private PaymentMethodRepository paymentMethodRepository;
 
-    @Autowired
+    @InjectMocks
     private PaymentMethodService paymentMethodService;
 
-    @Autowired
-    private ModelMapper modelMapper;
-
-    private PaymentMethodDTO paymentMethodDTO;
+    private UUID userId;
+    private PaymentMethod paymentMethod;
 
     @BeforeEach
-    void setUp() {
-        reset(paymentMethodRepository);
-
-        paymentMethodDTO = new PaymentMethodDTO();
-        paymentMethodDTO.setMethodId(1L);
-        paymentMethodDTO.setUserId(UUID.randomUUID());
-        paymentMethodDTO.setType("Credit Card");
-        paymentMethodDTO.setProvider("Visa");
-        paymentMethodDTO.setAccountNumber("123456789");
-        paymentMethodDTO.setExpiryDate(LocalDate.now().plusYears(2));
-        paymentMethodDTO.setCreatedAt(LocalDateTime.now());
-    }
-
-    @Test
-    void testCreatePaymentMethod() {
-        PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
-        when(paymentMethodRepository.save(any(PaymentMethod.class))).thenReturn(paymentMethod);
-
-        PaymentMethodDTO createdMethodDTO = paymentMethodService.save(paymentMethodDTO);
-
-        assertNotNull(createdMethodDTO, "PaymentMethod creation failed, returned object is null.");
-        assertEquals(paymentMethodDTO.getMethodId(), createdMethodDTO.getMethodId());
-        verify(paymentMethodRepository, times(1)).save(any(PaymentMethod.class));
-    }
-
-    @Test
-    void testFindPaymentMethodById_NotFound() {
-        when(paymentMethodRepository.findById(anyLong())).thenReturn(Optional.empty());
-
-        Optional<PaymentMethodDTO> foundMethodDTO = paymentMethodService.findById(999L);
-
-        assertFalse(foundMethodDTO.isPresent(), "PaymentMethod should not be found.");
-        verify(paymentMethodRepository, times(1)).findById(999L);
-    }
-
-    @Test
-    void testFindPaymentMethodById() {
-        PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
-        when(paymentMethodRepository.findById(paymentMethodDTO.getMethodId())).thenReturn(Optional.of(paymentMethod));
-
-        Optional<PaymentMethodDTO> foundMethodDTO = paymentMethodService.findById(paymentMethodDTO.getMethodId());
-
-        assertTrue(foundMethodDTO.isPresent(), "PaymentMethod not found.");
-        assertEquals(paymentMethodDTO.getMethodId(), foundMethodDTO.get().getMethodId());
-        verify(paymentMethodRepository, times(1)).findById(paymentMethodDTO.getMethodId());
-    }
-
-    @Test
-    void testUpdatePaymentMethod() {
-        paymentMethodDTO.setProvider("MasterCard");
-        PaymentMethod updatedPaymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
-
-        when(paymentMethodRepository.save(any(PaymentMethod.class))).thenReturn(updatedPaymentMethod);
-
-        PaymentMethodDTO updatedMethodDTO = paymentMethodService.save(paymentMethodDTO);
-
-        assertNotNull(updatedMethodDTO, "PaymentMethod update failed, returned object is null.");
-        assertEquals("MasterCard", updatedMethodDTO.getProvider(), "Provider did not update correctly.");
-        verify(paymentMethodRepository, times(1)).save(any(PaymentMethod.class));
-    }
-
-    @Test
-    void testSoftDeletePaymentMethod() {
-        PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
-        ArgumentCaptor<PaymentMethod> captor = ArgumentCaptor.forClass(PaymentMethod.class);
-
-        when(paymentMethodRepository.findById(paymentMethodDTO.getMethodId())).thenReturn(Optional.of(paymentMethod));
-        when(paymentMethodRepository.save(any(PaymentMethod.class))).thenReturn(paymentMethod);
-
-        paymentMethodService.softDelete(paymentMethodDTO.getMethodId(), "testUser");
-
-        verify(paymentMethodRepository, times(1)).findById(paymentMethodDTO.getMethodId());
-        verify(paymentMethodRepository, times(1)).save(captor.capture());
-
-        PaymentMethod softDeletedMethod = captor.getValue();
-        assertNotNull(softDeletedMethod.getDeletedAt(), "DeletedAt should not be null after soft delete.");
-        assertEquals("testUser", softDeletedMethod.getDeletedBy(), "DeletedBy should match the given user.");
-    }
-
-    @Test
-    void testSoftDeletePaymentMethod_NotFound() {
-        when(paymentMethodRepository.findById(anyLong())).thenReturn(Optional.empty());
-
-        paymentMethodService.softDelete(999L, "testUser");
-
-        verify(paymentMethodRepository, times(1)).findById(999L);
-        verify(paymentMethodRepository, never()).save(any(PaymentMethod.class));
-    }
-
-    @Test
-    void testFindAllPaymentMethods() {
-        PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
-        when(paymentMethodRepository.findAll()).thenReturn(List.of(paymentMethod));
-
-        List<PaymentMethodDTO> methodsListDTO = paymentMethodService.findAll();
-
-        assertNotNull(methodsListDTO, "PaymentMethod list is null.");
-        assertFalse(methodsListDTO.isEmpty(), "PaymentMethod list is empty.");
-        assertEquals(1, methodsListDTO.size(), "PaymentMethod list size mismatch.");
-        verify(paymentMethodRepository, times(1)).findAll();
-    }
-
-    @Test
-    void testSavePaymentMethodNotNull() {
-        PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);  // Mockito mocks'larını başlat
+        userId = UUID.randomUUID();
+        paymentMethod = new PaymentMethod();
+        paymentMethod.setMethodId(UUID.randomUUID());
+        paymentMethod.setUserId(userId);
+        paymentMethod.setType("Credit");
         paymentMethod.setProvider("Visa");
-
-        when(paymentMethodRepository.save(any(PaymentMethod.class))).thenReturn(paymentMethod);
-
-        PaymentMethodDTO result = paymentMethodService.save(paymentMethodDTO);
-
-        assertNotNull(result, "Saved payment method should not be null");
-        assertEquals("Visa", result.getProvider(), "Provider should match");
+        paymentMethod.setAccountNumber("1234567890");
+        paymentMethod.setDefault(true);
     }
 
+    @Test
+    public void testGetAllPaymentMethodsByUserId() {
+        // Mock: Kullanıcıya ait ödeme yöntemlerini döndür
+        when(paymentMethodRepository.findByUserId(userId)).thenReturn(List.of(paymentMethod));
 
+        // Servis metodu çağrılır
+        List<PaymentMethod> paymentMethods = paymentMethodService.getAllPaymentMethodsByUserId(userId);
+
+        // Assert: Sonuçların doğru olup olmadığını kontrol et
+        assertNotNull(paymentMethods);
+        assertEquals(1, paymentMethods.size());
+        assertEquals(paymentMethod.getUserId(), paymentMethods.get(0).getUserId());
+    }
+
+    @Test
+    public void testGetDefaultPaymentMethod() {
+        // Mock: Kullanıcının varsayılan ödeme yöntemini döndür
+        when(paymentMethodRepository.findByUserIdAndIsDefaultTrue(userId)).thenReturn(paymentMethod);
+
+        // Servis metodu çağrılır
+        PaymentMethod result = paymentMethodService.getDefaultPaymentMethod(userId);
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertNotNull(result);
+        assertTrue(result.isDefault());
+    }
+
+    @Test
+    public void testAddPaymentMethod() {
+        // Mock: Yeni ödeme yöntemini kaydet
+        when(paymentMethodRepository.save(paymentMethod)).thenReturn(paymentMethod);
+
+        // Servis metodu çağrılır
+        PaymentMethod savedPaymentMethod = paymentMethodService.addPaymentMethod(paymentMethod);
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertNotNull(savedPaymentMethod);
+        assertEquals(paymentMethod.getType(), savedPaymentMethod.getType());
+    }
+
+    @Test
+    public void testUpdatePaymentMethod() {
+        // Mock: Ödeme yönteminin güncellenmesi
+        when(paymentMethodRepository.existsById(paymentMethod.getMethodId())).thenReturn(true);
+        when(paymentMethodRepository.save(paymentMethod)).thenReturn(paymentMethod);
+
+        // Servis metodu çağrılır
+        PaymentMethod updatedPaymentMethod = paymentMethodService.updatePaymentMethod(paymentMethod);
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertNotNull(updatedPaymentMethod);
+        assertEquals(paymentMethod.getMethodId(), updatedPaymentMethod.getMethodId());
+    }
+
+    @Test
+    public void testDeletePaymentMethod() {
+        // Mock: Ödeme yönteminin mevcut olduğunu belirt
+        when(paymentMethodRepository.existsById(paymentMethod.getMethodId())).thenReturn(true);
+
+        // Servis metodu çağrılır
+        paymentMethodService.deletePaymentMethod(paymentMethod.getMethodId());
+
+        // Veritabanı erişimi kontrolü yapılır
+        verify(paymentMethodRepository, times(1)).deleteById(paymentMethod.getMethodId());
+    }
+
+    @Test
+    public void testDeletePaymentMethodNotFound() {
+        // Mock: Ödeme yönteminin mevcut olmadığını belirt
+        when(paymentMethodRepository.existsById(paymentMethod.getMethodId())).thenReturn(false);
+
+        // Servis metodu çağrılır ve exception fırlatılır
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            paymentMethodService.deletePaymentMethod(paymentMethod.getMethodId());
+        });
+
+        // Assert: Hata mesajının doğru olup olmadığını kontrol et
+        assertEquals("Ödeme yöntemi bulunamadı.", exception.getMessage());
+    }
+
+    @Test
+    public void testExistsByUserId() {
+        // Mock: Kullanıcıya ait ödeme yöntemlerinin var olup olmadığını kontrol et
+        when(paymentMethodRepository.findByUserId(userId)).thenReturn(List.of(paymentMethod));
+
+        // Servis metodu çağrılır
+        boolean exists = paymentMethodService.existsByUserId(userId);
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertTrue(exists);
+    }
+
+    @Test
+    public void testExistsByUserIdNoMethods() {
+        // Mock: Kullanıcıya ait ödeme yöntemlerinin olmadığını belirt
+        when(paymentMethodRepository.findByUserId(userId)).thenReturn(List.of());
+
+        // Servis metodu çağrılır
+        boolean exists = paymentMethodService.existsByUserId(userId);
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertFalse(exists);
+    }
+
+    @Test
+    public void testGetPaymentMethodById() {
+        // Mock: Belirli bir ödeme yöntemini getir
+        when(paymentMethodRepository.findById(paymentMethod.getMethodId())).thenReturn(Optional.of(paymentMethod));
+
+        // Servis metodu çağrılır
+        Optional<PaymentMethod> result = paymentMethodService.getPaymentMethodById(paymentMethod.getMethodId());
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertTrue(result.isPresent());
+        assertEquals(paymentMethod.getMethodId(), result.get().getMethodId());
+    }
+
+    @Test
+    public void testGetPaymentMethodByIdNotFound() {
+        // Mock: Belirli bir ödeme yöntemi bulunamadığında
+        when(paymentMethodRepository.findById(paymentMethod.getMethodId())).thenReturn(Optional.empty());
+
+        // Servis metodu çağrılır
+        Optional<PaymentMethod> result = paymentMethodService.getPaymentMethodById(paymentMethod.getMethodId());
+
+        // Assert: Sonucun boş olup olmadığını kontrol et
+        assertFalse(result.isPresent());
+    }
 }

@@ -1,13 +1,11 @@
 package tr.edu.ogu.ceng.payment.repository;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,126 +28,252 @@ public class RefundRepositoryTest {
     @Autowired
     private PaymentRepository paymentRepository;
 
-    private Refund refund1;
-    private Refund refund2;
-    private Payment payment;
-
     static {
         postgreSQLContainer.start();
     }
 
-    @BeforeEach
-    void setUp() {
-        payment = new Payment();
-        payment.setUserId(UUID.randomUUID());
-        payment.setAmount(new BigDecimal("1000.00"));
-        payment.setStatus("COMPLETED");
-        paymentRepository.save(payment);
-
-        refund1 = new Refund();
-        refund1.setPayment(payment);
-        refund1.setRefundAmount(new BigDecimal("200.00"));
-        refund1.setRefundReason("Defective product");
-        refund1.setStatus("PENDING");
-        refund1.setRefundDate(LocalDateTime.now().minusDays(1));
-        refund1.setRefundMethod("CREDIT_CARD");
-        refundRepository.save(refund1);
-
-        refund2 = new Refund();
-        refund2.setPayment(payment);
-        refund2.setRefundAmount(new BigDecimal("300.00"));
-        refund2.setRefundReason("Wrong size");
-        refund2.setStatus("COMPLETED");
-        refund2.setRefundDate(LocalDateTime.now());
-        refund2.setRefundMethod("BANK_TRANSFER");
-        refund2.setRefundIssuedAt(LocalDateTime.now());
-        refundRepository.save(refund2);
-    }
-
-    @Test
-    public void testFindById() {
-        Optional<Refund> found = refundRepository.findById(refund1.getRefundId());
-
-        assertThat(found).isPresent();
-        assertThat(found.get().getRefundReason()).isEqualTo(refund1.getRefundReason());
-    }
-
-    @Test
-    public void testFindByPaymentPaymentId() {
-        List<Refund> refunds = refundRepository.findByPaymentPaymentId(payment.getPaymentId());
-
-        assertThat(refunds).hasSize(2);
-        assertThat(refunds).allMatch(r -> r.getPayment().equals(payment));
-    }
-
-    @Test
-    public void testFindByStatus() {
-        List<Refund> pendingRefunds = refundRepository.findByStatus("PENDING");
-        List<Refund> completedRefunds = refundRepository.findByStatus("COMPLETED");
-
-        assertThat(pendingRefunds).hasSize(1);
-        assertThat(completedRefunds).hasSize(1);
-    }
-
-    @Test
-    public void testFindByRefundDateBetween() {
-        LocalDateTime startDate = LocalDateTime.now().minusDays(2);
-        LocalDateTime endDate = LocalDateTime.now().plusDays(1);
-
-        List<Refund> refunds = refundRepository.findByRefundDateBetween(startDate, endDate);
-
-        assertThat(refunds).hasSize(2);
-    }
-
-    @Test
-    public void testFindByRefundMethod() {
-        List<Refund> creditCardRefunds = refundRepository.findByRefundMethod("CREDIT_CARD");
-        List<Refund> bankTransferRefunds = refundRepository.findByRefundMethod("BANK_TRANSFER");
-
-        assertThat(creditCardRefunds).hasSize(1);
-        assertThat(bankTransferRefunds).hasSize(1);
-    }
-
-    @Test
-    public void testFindByRefundAmountGreaterThan() {
-        List<Refund> largeRefunds = refundRepository.findByRefundAmountGreaterThan(new BigDecimal("250.00"));
-
-        assertThat(largeRefunds).hasSize(1);
-    }
-
-    @Test
-    public void testFindByRefundIssuedAtIsNotNull() {
-        List<Refund> issuedRefunds = refundRepository.findByRefundIssuedAtIsNotNull();
-
-        assertThat(issuedRefunds).hasSize(1);
-        assertThat(issuedRefunds.get(0).getRefundIssuedAt()).isNotNull();
-    }
-
-    @Test
-    public void testCalculateTotalRefundsByPayment() {
-        BigDecimal totalRefunds = refundRepository.findByPaymentPaymentId(payment.getPaymentId())
-                .stream()
-                .map(Refund::getRefundAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        assertThat(totalRefunds).isEqualTo(new BigDecimal("500.00"));
-    }
-
-    @Test
-    public void testSoftDelete() {
-        Refund refund = refundRepository.findById(refund1.getRefundId()).orElseThrow();
-        refund.setDeletedAt(LocalDateTime.now());
-        refund.setDeletedBy("testUser");
-        refundRepository.save(refund);
-
-        Optional<Refund> deletedRefund = refundRepository.findById(refund1.getRefundId());
-        assertThat(deletedRefund).isEmpty();
-    }
-
     @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
+    static void setProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", postgreSQLContainer::getJdbcUrl);
         registry.add("spring.datasource.username", postgreSQLContainer::getUsername);
         registry.add("spring.datasource.password", postgreSQLContainer::getPassword);
     }
+
+    @BeforeEach
+    public void setUp() {
+        refundRepository.deleteAll();
+        paymentRepository.deleteAll();
+    }
+
+    @Test
+    public void testSaveRefund() {
+        Payment payment = new Payment();
+        payment.setUserId(UUID.randomUUID());
+        payment.setAmount(BigDecimal.valueOf(100.00));
+        payment.setStatus("COMPLETED");
+        payment.setTransactionDate(LocalDateTime.now());
+        payment.setDescription("Test Payment");
+        payment.setRecurring(false);
+        payment.setPaymentChannel("Online");
+
+        Payment savedPayment = paymentRepository.save(payment);
+
+        Refund refund = new Refund();
+        refund.setRefundId(UUID.randomUUID());
+        refund.setPayment(savedPayment);  // Set the Payment object instead of paymentId
+        refund.setRefundAmount(BigDecimal.valueOf(50.75));
+        refund.setRefundDate(LocalDateTime.now());
+        refund.setStatus("PENDING");
+
+        Refund savedRefund = refundRepository.save(refund);
+        assertThat(savedRefund).isNotNull();
+        assertThat(savedRefund.getRefundId()).isNotNull();
+    }
+
+    @Test
+    public void testFindByPaymentId() {
+        Payment payment = new Payment();
+        payment.setUserId(UUID.randomUUID());
+        payment.setAmount(BigDecimal.valueOf(100.00));
+        payment.setStatus("COMPLETED");
+        payment.setTransactionDate(LocalDateTime.now());
+        payment.setDescription("Test Payment");
+        payment.setRecurring(false);
+        payment.setPaymentChannel("Online");
+
+        Payment savedPayment = paymentRepository.save(payment);
+
+        Refund refund = new Refund();
+        refund.setRefundId(UUID.randomUUID());
+        refund.setPayment(savedPayment);  // Set the Payment object
+        refund.setRefundAmount(BigDecimal.valueOf(50.00));
+        refund.setRefundDate(LocalDateTime.now());
+        refund.setStatus("COMPLETED");
+        refundRepository.save(refund);
+
+        List<Refund> refunds = refundRepository.findByPayment_PaymentId(savedPayment.getPaymentId());
+        assertThat(refunds).hasSize(1);
+        assertThat(refunds.get(0).getPayment().getPaymentId()).isEqualTo(savedPayment.getPaymentId());
+    }
+
+    @Test
+    public void testFindByStatus() {
+        Payment payment1 = new Payment();
+        payment1.setUserId(UUID.randomUUID());
+        payment1.setAmount(BigDecimal.valueOf(75.00));
+        payment1.setStatus("COMPLETED");
+        payment1.setTransactionDate(LocalDateTime.now());
+        payment1.setDescription("Payment 1");
+        paymentRepository.save(payment1);
+
+        Payment payment2 = new Payment();
+        payment2.setUserId(UUID.randomUUID());
+        payment2.setAmount(BigDecimal.valueOf(100.00));
+        payment2.setStatus("COMPLETED");
+        payment2.setTransactionDate(LocalDateTime.now());
+        payment2.setDescription("Payment 2");
+        paymentRepository.save(payment2);
+
+        Refund refund1 = new Refund();
+        refund1.setRefundId(UUID.randomUUID());
+        refund1.setPayment(payment1);  // Set the Payment object
+        refund1.setRefundAmount(BigDecimal.valueOf(50.00));
+        refund1.setRefundDate(LocalDateTime.now());
+        refund1.setStatus("PENDING");
+        refundRepository.save(refund1);
+
+        Refund refund2 = new Refund();
+        refund2.setRefundId(UUID.randomUUID());
+        refund2.setPayment(payment2);  // Set the Payment object
+        refund2.setRefundAmount(BigDecimal.valueOf(100.00));
+        refund2.setRefundDate(LocalDateTime.now());
+        refund2.setStatus("COMPLETED");
+        refundRepository.save(refund2);
+
+        List<Refund> pendingRefunds = refundRepository.findByStatus("PENDING");
+        assertThat(pendingRefunds).hasSize(1);
+        assertThat(pendingRefunds.get(0).getStatus()).isEqualTo("PENDING");
+
+        List<Refund> completedRefunds = refundRepository.findByStatus("COMPLETED");
+        assertThat(completedRefunds).hasSize(1);
+        assertThat(completedRefunds.get(0).getStatus()).isEqualTo("COMPLETED");
+    }
+
+    @Test
+    public void testFindByRefundDateBetween() {
+        LocalDateTime startDate = LocalDateTime.now().minusDays(1);
+        LocalDateTime endDate = LocalDateTime.now().plusDays(1);
+
+        Payment payment1 = new Payment();
+        payment1.setUserId(UUID.randomUUID());
+        payment1.setAmount(BigDecimal.valueOf(75.00));
+        payment1.setStatus("COMPLETED");
+        payment1.setTransactionDate(LocalDateTime.now().minusHours(5));
+        payment1.setDescription("Payment 1");
+        paymentRepository.save(payment1);
+
+        Payment payment2 = new Payment();
+        payment2.setUserId(UUID.randomUUID());
+        payment2.setAmount(BigDecimal.valueOf(100.00));
+        payment2.setStatus("COMPLETED");
+        payment2.setTransactionDate(LocalDateTime.now().plusHours(5));
+        payment2.setDescription("Payment 2");
+        paymentRepository.save(payment2);
+
+        Refund refund1 = new Refund();
+        refund1.setRefundId(UUID.randomUUID());
+        refund1.setPayment(payment1);
+        refund1.setRefundAmount(BigDecimal.valueOf(50.00));
+        refund1.setRefundDate(LocalDateTime.now().minusHours(5));
+        refund1.setStatus("COMPLETED");
+        refundRepository.save(refund1);
+
+        Refund refund2 = new Refund();
+        refund2.setRefundId(UUID.randomUUID());
+        refund2.setPayment(payment2);
+        refund2.setRefundAmount(BigDecimal.valueOf(100.00));
+        refund2.setRefundDate(LocalDateTime.now().plusHours(5));
+        refund2.setStatus("PENDING");
+        refundRepository.save(refund2);
+
+        List<Refund> refunds = refundRepository.findByRefundDateBetween(startDate, endDate);
+        assertThat(refunds).hasSize(2);
+    }
+
+    @Test
+    public void testCalculateTotalRefundAmount() {
+        // Create and save Payment objects first with status set
+        Payment payment = new Payment();
+        payment.setUserId(UUID.randomUUID());
+        payment.setAmount(BigDecimal.valueOf(100.50));
+        payment.setStatus("PENDING");
+        payment.setTransactionDate(LocalDateTime.now());
+        payment.setDescription("Test Payment");
+        payment.setRecurring(false);
+        payment.setPaymentChannel("Online");
+        paymentRepository.save(payment); // Save the Payment to persist it in DB
+    
+        Payment payment2 = new Payment();
+        payment2.setUserId(UUID.randomUUID());
+        payment2.setAmount(BigDecimal.valueOf(100.50));
+        payment2.setStatus("PENDING");
+        payment2.setTransactionDate(LocalDateTime.now());
+        payment2.setDescription("Test Payment");
+        payment2.setRecurring(false);
+        payment2.setPaymentChannel("Online");
+        paymentRepository.save(payment2); // Save the Payment to persist it in DB
+    
+    
+        // Create and save Refund objects
+        Refund refund1 = new Refund();
+        refund1.setRefundId(UUID.randomUUID());
+        refund1.setPayment(payment);  // Associate with a persisted Payment
+        refund1.setRefundAmount(BigDecimal.valueOf(75.00));
+        refund1.setRefundDate(LocalDateTime.now());
+        refund1.setStatus("COMPLETED");
+        refundRepository.save(refund1);
+    
+        Refund refund2 = new Refund();
+        refund2.setRefundId(UUID.randomUUID());
+        refund2.setPayment(payment2);  // Associate with a persisted Payment
+        refund2.setRefundAmount(BigDecimal.valueOf(100.00));
+        refund2.setRefundDate(LocalDateTime.now());
+        refund2.setStatus("COMPLETED");
+        refundRepository.save(refund2);
+    
+        // Calculate total refund amount
+        BigDecimal totalRefundAmount = refundRepository.calculateTotalRefundAmount();
+        
+        // Assert the expected total refund amount
+        assertThat(totalRefundAmount).isEqualByComparingTo(BigDecimal.valueOf(175.00));
+    }
+
+    @Test
+public void testCalculateTotalRefundAmountByStatus() {
+    Payment payment = new Payment();
+    payment.setUserId(UUID.randomUUID());
+    payment.setAmount(BigDecimal.valueOf(100.50));
+    payment.setStatus("PENDING");
+    payment.setTransactionDate(LocalDateTime.now());
+    payment.setDescription("Test Payment");
+    payment.setRecurring(false);
+    payment.setPaymentChannel("Online");
+    paymentRepository.save(payment);  // Save the Payment
+
+    Payment payment2 = new Payment();
+    payment2.setUserId(UUID.randomUUID());
+    payment2.setAmount(BigDecimal.valueOf(100.50));
+    payment2.setStatus("PENDING");
+    payment2.setTransactionDate(LocalDateTime.now());
+    payment2.setDescription("Test Payment");
+    payment2.setRecurring(false);
+    payment2.setPaymentChannel("Online");
+    paymentRepository.save(payment2); 
+
+    // Create and save Refund objects
+    Refund refund1 = new Refund();
+    refund1.setRefundId(UUID.randomUUID());
+    refund1.setPayment(payment);  // Associate with the first Payment
+    refund1.setRefundAmount(BigDecimal.valueOf(60.00));
+    refund1.setRefundDate(LocalDateTime.now());
+    refund1.setStatus("COMPLETED");
+    refundRepository.save(refund1);
+
+    Refund refund2 = new Refund();
+    refund2.setRefundId(UUID.randomUUID());
+    refund2.setPayment(payment2);  // Associate with the second Payment
+    refund2.setRefundAmount(BigDecimal.valueOf(40.00));
+    refund2.setRefundDate(LocalDateTime.now());
+    refund2.setStatus("PENDING");
+    refundRepository.save(refund2);
+
+    // Calculate total refund amount for "COMPLETED" status
+    BigDecimal completedAmount = refundRepository.calculateTotalRefundAmountByStatus("COMPLETED");
+    assertThat(completedAmount).isEqualByComparingTo(BigDecimal.valueOf(60.00));
+
+    // Calculate total refund amount for "PENDING" status
+    BigDecimal pendingAmount = refundRepository.calculateTotalRefundAmountByStatus("PENDING");
+    assertThat(pendingAmount).isEqualByComparingTo(BigDecimal.valueOf(40.00));
+}
+
 }

@@ -1,12 +1,11 @@
 package tr.edu.ogu.ceng.payment.repository;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,9 +14,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-import tr.edu.ogu.ceng.payment.entity.Currency;
 import tr.edu.ogu.ceng.payment.entity.Payment;
-import tr.edu.ogu.ceng.payment.entity.PaymentMethod;
 
 @SpringBootTest
 public class PaymentRepositoryTest {
@@ -30,167 +27,168 @@ public class PaymentRepositoryTest {
     @Autowired
     private PaymentMethodRepository paymentMethodRepository;
 
-    @Autowired
-    private CurrencyRepository currencyRepository;
-
-    private Payment payment1;
-    private Payment payment2;
-    private PaymentMethod paymentMethod;
-    private Currency currency;
-    private UUID userId;
-
     static {
         postgreSQLContainer.start();
     }
 
+    @DynamicPropertySource
+    static void setProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", postgreSQLContainer::getJdbcUrl);
+        registry.add("spring.datasource.username", postgreSQLContainer::getUsername);
+        registry.add("spring.datasource.password", postgreSQLContainer::getPassword);
+    }
+
     @BeforeEach
-    void setUp() {
-        userId = UUID.randomUUID();
-
-        currency = new Currency();
-        currency.setCurrencyName("USD");
-        currency.setSymbol("$");
-        currency.setExchangeRate(BigDecimal.ONE);
-        currencyRepository.save(currency);
-
-        paymentMethod = new PaymentMethod();
-        paymentMethod.setType("CREDIT_CARD");
-        paymentMethod.setProvider("VISA");
-        paymentMethod.setUserId(userId);
-        paymentMethod.setAccountNumber("4111111111111111");
-        paymentMethod.setExpiryDate(LocalDateTime.now().plusYears(2).toLocalDate());
-        paymentMethodRepository.save(paymentMethod);
-
-        payment1 = new Payment();
-        payment1.setUserId(userId);
-        payment1.setAmount(new BigDecimal("100.00"));
-        payment1.setCurrency(currency);
-        payment1.setStatus("COMPLETED");
-        payment1.setPaymentMethod(paymentMethod);
-        payment1.setTransactionDate(LocalDateTime.now().minusDays(1));
-        payment1.setRecurring(false);
-        paymentRepository.save(payment1);
-
-        payment2 = new Payment();
-        payment2.setUserId(userId);
-        payment2.setAmount(new BigDecimal("200.00"));
-        payment2.setCurrency(currency);
-        payment2.setStatus("PENDING");
-        payment2.setPaymentMethod(paymentMethod);
-        payment2.setTransactionDate(LocalDateTime.now());
-        payment2.setRecurring(true);
-        paymentRepository.save(payment2);
+    public void setUp() {
+        paymentRepository.deleteAll();
+        paymentMethodRepository.deleteAll();
     }
 
     @Test
-    public void testFindByUserIdOrderByTransactionDateDesc() {
-        List<Payment> payments = paymentRepository.findByUserIdOrderByTransactionDateDesc(userId);
+    public void testSavePayment() {
+        Payment payment = new Payment();
+        payment.setUserId(UUID.randomUUID());
+        payment.setAmount(BigDecimal.valueOf(100.50));
+        payment.setStatus("PENDING");
+        payment.setTransactionDate(LocalDateTime.now());
+        payment.setDescription("Test Payment");
+        payment.setRecurring(false);
+        payment.setPaymentChannel("Online");
 
-        assertThat(payments).hasSize(2);
-        assertThat(payments.get(0).getTransactionDate())
-                .isAfterOrEqualTo(payments.get(1).getTransactionDate());
+        Payment savedPayment = paymentRepository.save(payment);
+        assertThat(savedPayment).isNotNull();
+        assertThat(savedPayment.getPaymentId()).isNotNull();
+    }
+
+    @Test
+    public void testFindByUserId() {
+        UUID userId = UUID.randomUUID();
+        Payment payment = new Payment();
+        payment.setUserId(userId);
+        payment.setAmount(BigDecimal.valueOf(50.75));
+        payment.setStatus("COMPLETED");
+        payment.setTransactionDate(LocalDateTime.now());
+
+        paymentRepository.save(payment);
+
+        List<Payment> payments = paymentRepository.findByUserId(userId);
+        assertThat(payments).hasSize(1);
+        assertThat(payments.get(0).getAmount()).isEqualByComparingTo(BigDecimal.valueOf(50.75));
     }
 
     @Test
     public void testFindByStatus() {
-        List<Payment> completedPayments = paymentRepository.findByStatus("COMPLETED");
-        List<Payment> pendingPayments = paymentRepository.findByStatus("PENDING");
+        Payment payment1 = new Payment();
+        payment1.setUserId(UUID.randomUUID());
+        payment1.setAmount(BigDecimal.valueOf(25.00));
+        payment1.setStatus("PENDING");
+        payment1.setTransactionDate(LocalDateTime.now());
+        paymentRepository.save(payment1);
 
-        assertThat(completedPayments).hasSize(1);
+        Payment payment2 = new Payment();
+        payment2.setUserId(UUID.randomUUID());
+        payment2.setAmount(BigDecimal.valueOf(50.00));
+        payment2.setStatus("COMPLETED");
+        payment2.setTransactionDate(LocalDateTime.now());
+        paymentRepository.save(payment2);
+
+        List<Payment> pendingPayments = paymentRepository.findByStatus("PENDING");
         assertThat(pendingPayments).hasSize(1);
+        assertThat(pendingPayments.get(0).getAmount()).isEqualByComparingTo(BigDecimal.valueOf(25.00));
+
+        List<Payment> completedPayments = paymentRepository.findByStatus("COMPLETED");
+        assertThat(completedPayments).hasSize(1);
+        assertThat(completedPayments.get(0).getAmount()).isEqualByComparingTo(BigDecimal.valueOf(50.00));
     }
+
 
     @Test
     public void testFindByTransactionDateBetween() {
-        LocalDateTime startDate = LocalDateTime.now().minusDays(2);
+        LocalDateTime startDate = LocalDateTime.now().minusDays(1);
         LocalDateTime endDate = LocalDateTime.now().plusDays(1);
+
+        Payment payment1 = new Payment();
+        payment1.setUserId(UUID.randomUUID());
+        payment1.setAmount(BigDecimal.valueOf(30.00));
+        payment1.setStatus("COMPLETED");
+        payment1.setTransactionDate(LocalDateTime.now().minusHours(5));
+        paymentRepository.save(payment1);
+
+        Payment payment2 = new Payment();
+        payment2.setUserId(UUID.randomUUID());
+        payment2.setAmount(BigDecimal.valueOf(40.00));
+        payment2.setStatus("PENDING");
+        payment2.setTransactionDate(LocalDateTime.now().plusHours(5));
+        paymentRepository.save(payment2);
 
         List<Payment> payments = paymentRepository.findByTransactionDateBetween(startDate, endDate);
-
         assertThat(payments).hasSize(2);
     }
 
     @Test
-    public void testFindByAmountGreaterThan() {
-        List<Payment> payments = paymentRepository.findByAmountGreaterThan(new BigDecimal("150.00"));
-
-        assertThat(payments).hasSize(1);
-        assertThat(payments.get(0).getAmount()).isGreaterThan(new BigDecimal("150.00"));
-    }
-
-    @Test
-    public void testFindByPaymentMethodMethodId() {
-        List<Payment> payments = paymentRepository.findByPaymentMethodMethodId(paymentMethod.getMethodId());
-
-        assertThat(payments).hasSize(2);
-    }
-
-    @Test
-    public void testFindByCurrencyId() {
-        List<Payment> payments = paymentRepository.findByCurrencyId(currency.getId());
-
-        assertThat(payments).hasSize(2);
-    }
-
-    @Test
-    public void testFindByRecurringTrue() {
-        List<Payment> recurringPayments = paymentRepository.findByRecurringTrue();
-
-        assertThat(recurringPayments).hasSize(1);
-        assertThat(recurringPayments.get(0).isRecurring()).isTrue();
-    }
-
-    @Test
-    public void testFindPaymentsByStatusAmountAndDate() {
-        LocalDateTime startDate = LocalDateTime.now().minusDays(2);
-        List<Payment> payments = paymentRepository.findPaymentsByStatusAmountAndDate(
-                "COMPLETED",
-                new BigDecimal("50.00"),
-                startDate
-        );
-
-        assertThat(payments).hasSize(1);
-    }
-
-    @Test
-    public void testCalculateTotalPaymentAmountByUser() {
-        BigDecimal total = paymentRepository.calculateTotalPaymentAmountByUser(userId);
-
-        assertThat(total).isEqualTo(new BigDecimal("300.00"));
-    }
-
-    @Test
-    public void testFindFirstByUserIdOrderByTransactionDateDesc() {
-        Payment lastPayment = paymentRepository.findFirstByUserIdOrderByTransactionDateDesc(userId)
-                .orElseThrow();
-
-        assertThat(lastPayment.getTransactionDate()).isEqualTo(payment2.getTransactionDate());
-    }
-
-    @Test
-    public void testFindSuccessfulPaymentsBetweenDates() {
-        LocalDateTime startDate = LocalDateTime.now().minusDays(2);
+    public void testFindByUserIdAndDateRange() {
+        UUID userId = UUID.randomUUID();
+        LocalDateTime startDate = LocalDateTime.now().minusDays(1);
         LocalDateTime endDate = LocalDateTime.now().plusDays(1);
 
-        List<Payment> payments = paymentRepository.findSuccessfulPaymentsBetweenDates(startDate, endDate);
+        Payment payment1 = new Payment();
+        payment1.setUserId(userId);
+        payment1.setAmount(BigDecimal.valueOf(25.00));
+        payment1.setStatus("PENDING");
+        payment1.setTransactionDate(LocalDateTime.now().minusHours(5));
+        paymentRepository.save(payment1);
 
-        assertThat(payments).hasSize(1);
-        assertThat(payments.get(0).getStatus()).isEqualTo("COMPLETED");
+        Payment payment2 = new Payment();
+        payment2.setUserId(userId);
+        payment2.setAmount(BigDecimal.valueOf(35.00));
+        payment2.setStatus("COMPLETED");
+        payment2.setTransactionDate(LocalDateTime.now().plusHours(5));
+        paymentRepository.save(payment2);
+
+        List<Payment> payments = paymentRepository.findByUserIdAndDateRange(userId, startDate, endDate);
+        assertThat(payments).hasSize(2);
     }
 
     @Test
-    public void testFindHighValuePayments() {
-        List<Payment> highValuePayments = paymentRepository.findHighValuePayments();
+    public void testCalculateTotalAmount() {
+        Payment payment1 = new Payment();
+        payment1.setUserId(UUID.randomUUID());
+        payment1.setAmount(BigDecimal.valueOf(100.00));
+        payment1.setStatus("COMPLETED");
+        payment1.setTransactionDate(LocalDateTime.now());
+        paymentRepository.save(payment1);
 
-        assertThat(highValuePayments).hasSize(1);
-        assertThat(highValuePayments.get(0).getAmount())
-                .isGreaterThan(new BigDecimal("150.00"));
+        Payment payment2 = new Payment();
+        payment2.setUserId(UUID.randomUUID());
+        payment2.setAmount(BigDecimal.valueOf(50.00));
+        payment2.setStatus("COMPLETED");
+        payment2.setTransactionDate(LocalDateTime.now());
+        paymentRepository.save(payment2);
+
+        BigDecimal totalAmount = paymentRepository.calculateTotalAmount();
+        assertThat(totalAmount).isEqualByComparingTo(BigDecimal.valueOf(150.00));
     }
 
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgreSQLContainer::getJdbcUrl);
-        registry.add("spring.datasource.username", postgreSQLContainer::getUsername);
-        registry.add("spring.datasource.password", postgreSQLContainer::getPassword);
+    @Test
+    public void testCalculateTotalAmountByStatus() {
+        Payment payment1 = new Payment();
+        payment1.setUserId(UUID.randomUUID());
+        payment1.setAmount(BigDecimal.valueOf(50.00));
+        payment1.setStatus("COMPLETED");
+        payment1.setTransactionDate(LocalDateTime.now());
+        paymentRepository.save(payment1);
+
+        Payment payment2 = new Payment();
+        payment2.setUserId(UUID.randomUUID());
+        payment2.setAmount(BigDecimal.valueOf(25.00));
+        payment2.setStatus("PENDING");
+        payment2.setTransactionDate(LocalDateTime.now());
+        paymentRepository.save(payment2);
+
+        BigDecimal completedAmount = paymentRepository.calculateTotalAmountByStatus("COMPLETED");
+        assertThat(completedAmount).isEqualByComparingTo(BigDecimal.valueOf(50.00));
+
+        BigDecimal pendingAmount = paymentRepository.calculateTotalAmountByStatus("PENDING");
+        assertThat(pendingAmount).isEqualByComparingTo(BigDecimal.valueOf(25.00));
     }
 }

@@ -1,162 +1,180 @@
 package tr.edu.ogu.ceng.payment.service;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.dto.PaymentDTO;
-import tr.edu.ogu.ceng.payment.entity.Payment;
-import tr.edu.ogu.ceng.payment.repository.PaymentRepository;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
-@ExtendWith(SpringExtension.class)
+import tr.edu.ogu.ceng.payment.entity.Payment;
+import tr.edu.ogu.ceng.payment.repository.PaymentRepository;
+
+@ExtendWith(MockitoExtension.class)
 public class PaymentServiceTest {
 
-    @MockBean
+    @Mock
     private PaymentRepository paymentRepository;
 
-    @Autowired
+    @InjectMocks
     private PaymentService paymentService;
 
-    @Autowired
-    private ModelMapper modelMapper;
-
-    private PaymentDTO paymentDTO;
+    private UUID userId;
+    private Payment payment;
 
     @BeforeEach
-    void setUp() {
-        reset(paymentRepository);
+    public void setUp() {
+        userId = UUID.randomUUID();  // New userId for the test
 
-        paymentDTO = new PaymentDTO();
-        paymentDTO.setPaymentId(1L);
-        paymentDTO.setUserId(UUID.randomUUID());
-        paymentDTO.setAmount(BigDecimal.valueOf(150.75));
-        paymentDTO.setStatus("Pending");
-        paymentDTO.setTransactionDate(LocalDateTime.now());
-        paymentDTO.setDescription("Test payment description");
+        payment = new Payment();
+        payment.setPaymentId(UUID.randomUUID());
+        payment.setUserId(userId);
+        payment.setAmount(BigDecimal.valueOf(100.50));
+        payment.setStatus("Completed");
+        payment.setTransactionDate(LocalDateTime.now());
+        payment.setDescription("Test Payment");
+        payment.setRecurring(false);
+        payment.setPaymentChannel("Online");
     }
 
     @Test
-    void testCreatePayment() {
-        Payment payment = modelMapper.map(paymentDTO, Payment.class);
-        when(paymentRepository.save(any(Payment.class))).thenReturn(payment);
+    public void testGetAllPaymentsByUserId() {
+        // Mock the behavior of the repository
+        when(paymentRepository.findByUserId(userId)).thenReturn(List.of(payment));
 
-        PaymentDTO createdPaymentDTO = paymentService.save(paymentDTO);
+        List<Payment> payments = paymentService.getAllPaymentsByUserId(userId);
 
-        assertNotNull(createdPaymentDTO, "Payment creation failed, returned object is null.");
-        assertEquals(paymentDTO.getPaymentId(), createdPaymentDTO.getPaymentId());
-        verify(paymentRepository, times(1)).save(any(Payment.class));
+        assertNotNull(payments);
+        assertEquals(1, payments.size());
+        assertEquals(payment.getUserId(), payments.get(0).getUserId());
+
+        // Verify the repository method was called
+        verify(paymentRepository, times(1)).findByUserId(userId);
     }
 
     @Test
-    void testFindPaymentById_NotFound() {
-        when(paymentRepository.findById(anyLong())).thenReturn(Optional.empty());
+    public void testGetPaymentsByStatus() {
+        // Mock the repository behavior
+        when(paymentRepository.findByStatus("Completed")).thenReturn(List.of(payment));
 
-        Optional<PaymentDTO> foundPaymentDTO = paymentService.findById(999L);
+        List<Payment> payments = paymentService.getPaymentsByStatus("Completed");
 
-        assertFalse(foundPaymentDTO.isPresent(), "Payment should not be found.");
-        verify(paymentRepository, times(1)).findById(999L);
+        assertNotNull(payments);
+        assertTrue(payments.size() > 0);
+        assertEquals("Completed", payments.get(0).getStatus());
+
+        // Verify the repository method was called
+        verify(paymentRepository, times(1)).findByStatus("Completed");
     }
 
     @Test
-    void testFindPaymentById() {
-        Payment payment = modelMapper.map(paymentDTO, Payment.class);
-        when(paymentRepository.findById(paymentDTO.getPaymentId())).thenReturn(Optional.of(payment));
+    public void testGetPaymentsByPaymentMethod() {
+        UUID methodId = UUID.randomUUID(); // Mocked methodId
+        when(paymentRepository.findByPaymentMethod_MethodId(methodId)).thenReturn(List.of(payment));
 
-        Optional<PaymentDTO> foundPaymentDTO = paymentService.findById(paymentDTO.getPaymentId());
+        List<Payment> payments = paymentService.getPaymentsByPaymentMethod(methodId);
 
-        assertTrue(foundPaymentDTO.isPresent(), "Payment not found.");
-        assertEquals(paymentDTO.getPaymentId(), foundPaymentDTO.get().getPaymentId());
-        verify(paymentRepository, times(1)).findById(paymentDTO.getPaymentId());
+        assertNotNull(payments);
+        // Verify repository method was called
+        verify(paymentRepository, times(1)).findByPaymentMethod_MethodId(methodId);
     }
 
     @Test
-    void testUpdatePayment() {
-        paymentDTO.setStatus("Completed");
-        Payment updatedPayment = modelMapper.map(paymentDTO, Payment.class);
+    public void testGetPaymentsByDateRange() {
+        LocalDateTime startDate = LocalDateTime.now().minusDays(1);
+        LocalDateTime endDate = LocalDateTime.now().plusDays(1);
+        when(paymentRepository.findByTransactionDateBetween(startDate, endDate)).thenReturn(List.of(payment));
 
-        when(paymentRepository.save(any(Payment.class))).thenReturn(updatedPayment);
+        List<Payment> payments = paymentService.getPaymentsByDateRange(startDate, endDate);
 
-        PaymentDTO updatedPaymentDTO = paymentService.save(paymentDTO);
+        assertNotNull(payments);
+        assertTrue(payments.size() > 0);
+        assertTrue(payments.get(0).getTransactionDate().isAfter(startDate));
+        assertTrue(payments.get(0).getTransactionDate().isBefore(endDate));
 
-        assertNotNull(updatedPaymentDTO, "Payment update failed, returned object is null.");
-        assertEquals("Completed", updatedPaymentDTO.getStatus(), "Status did not update correctly.");
-        verify(paymentRepository, times(1)).save(any(Payment.class));
+        // Verify repository method was called
+        verify(paymentRepository, times(1)).findByTransactionDateBetween(startDate, endDate);
     }
 
     @Test
-    void testSoftDeletePayment() {
-        Payment payment = modelMapper.map(paymentDTO, Payment.class);
-        ArgumentCaptor<Payment> captor = ArgumentCaptor.forClass(Payment.class);
+    public void testCalculateTotalAmount() {
+        when(paymentRepository.calculateTotalAmount()).thenReturn(BigDecimal.valueOf(500.00));
 
-        when(paymentRepository.findById(paymentDTO.getPaymentId())).thenReturn(Optional.of(payment));
-        when(paymentRepository.save(any(Payment.class))).thenReturn(payment);
+        BigDecimal totalAmount = paymentService.calculateTotalAmount();
 
-        paymentService.softDelete(paymentDTO.getPaymentId(), "testUser");
+        assertNotNull(totalAmount);
+        assertEquals(0, totalAmount.compareTo(BigDecimal.valueOf(500.00)));
 
-        verify(paymentRepository, times(1)).findById(paymentDTO.getPaymentId());
-        verify(paymentRepository, times(1)).save(captor.capture());
-
-        Payment softDeletedPayment = captor.getValue();
-        assertNotNull(softDeletedPayment.getDeletedAt(), "DeletedAt should not be null after soft delete.");
-        assertEquals("testUser", softDeletedPayment.getDeletedBy(), "DeletedBy should match the given user.");
+        // Verify repository method was called
+        verify(paymentRepository, times(1)).calculateTotalAmount();
     }
 
     @Test
-    void testSoftDeletePayment_NotFound() {
-        when(paymentRepository.findById(anyLong())).thenReturn(Optional.empty());
+    public void testCalculateTotalAmountByStatus() {
+        when(paymentRepository.calculateTotalAmountByStatus("Completed")).thenReturn(BigDecimal.valueOf(100.00));
 
-        paymentService.softDelete(999L, "testUser");
+        BigDecimal totalAmount = paymentService.calculateTotalAmountByStatus("Completed");
 
-        verify(paymentRepository, times(1)).findById(999L);
-        verify(paymentRepository, never()).save(any(Payment.class));
+        assertNotNull(totalAmount);
+        assertEquals(0, totalAmount.compareTo(BigDecimal.valueOf(100.00)));
+
+        // Verify repository method was called
+        verify(paymentRepository, times(1)).calculateTotalAmountByStatus("Completed");
     }
 
     @Test
-    void testFindAllPayments() {
-        Payment payment = modelMapper.map(paymentDTO, Payment.class);
-        when(paymentRepository.findAll()).thenReturn(List.of(payment));
+    public void testAddPayment() {
+        when(paymentRepository.save(payment)).thenReturn(payment);
 
-        List<PaymentDTO> paymentsDTOList = paymentService.findAll();
+        Payment savedPayment = paymentService.addPayment(payment);
 
-        assertNotNull(paymentsDTOList, "Payment list is null.");
-        assertFalse(paymentsDTOList.isEmpty(), "Payment list is empty.");
-        assertEquals(1, paymentsDTOList.size(), "Payment list size mismatch.");
-        verify(paymentRepository, times(1)).findAll();
+        assertNotNull(savedPayment);
+        assertEquals(payment.getAmount(), savedPayment.getAmount());
+
+        // Verify repository method was called
+        verify(paymentRepository, times(1)).save(payment);
     }
 
     @Test
-    void testFindByIdReturnsPayment() {
-        Payment payment = modelMapper.map(paymentDTO, Payment.class);
-        payment.setAmount(BigDecimal.valueOf(200.0));
-        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment));
+    public void testUpdatePayment() {
+        payment.setStatus("Refunded");
 
-        Optional<PaymentDTO> result = paymentService.findById(1L);
+        when(paymentRepository.existsById(payment.getPaymentId())).thenReturn(true);
+        when(paymentRepository.save(payment)).thenReturn(payment);
 
-        assertTrue(result.isPresent(), "findById should return a payment when the ID is valid");
-        assertEquals(0, result.get().getAmount().compareTo(BigDecimal.valueOf(200.0)), "Payment amount should match");
+        Payment updatedPayment = paymentService.updatePayment(payment);
+
+        assertNotNull(updatedPayment);
+        assertEquals("Refunded", updatedPayment.getStatus());
+
+        // Verify repository method was called
+        verify(paymentRepository, times(1)).existsById(payment.getPaymentId());
+        verify(paymentRepository, times(1)).save(payment);
     }
 
+    @Test
+    public void testDeletePayment() {
+        UUID paymentId = payment.getPaymentId();
 
+        when(paymentRepository.existsById(paymentId)).thenReturn(true);
+        doNothing().when(paymentRepository).deleteById(paymentId);
+
+        paymentService.deletePayment(paymentId);
+
+        // Verify repository method was called
+        verify(paymentRepository, times(1)).existsById(paymentId);
+        verify(paymentRepository, times(1)).deleteById(paymentId);
+    }
 }

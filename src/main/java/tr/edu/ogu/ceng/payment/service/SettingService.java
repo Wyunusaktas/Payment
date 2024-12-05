@@ -1,55 +1,71 @@
 package tr.edu.ogu.ceng.payment.service;
 
-import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import tr.edu.ogu.ceng.payment.dto.SettingDTO;
+
 import tr.edu.ogu.ceng.payment.entity.Setting;
 import tr.edu.ogu.ceng.payment.repository.SettingRepository;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-@RequiredArgsConstructor
 @Service
 public class SettingService {
 
     private final SettingRepository settingRepository;
-    private final ModelMapper modelMapper;
 
-    public List<SettingDTO> findAll() {
-        return settingRepository.findAll()
-                .stream()
-                .map(setting -> modelMapper.map(setting, SettingDTO.class))
-                .collect(Collectors.toList());
+    @Autowired
+    public SettingService(SettingRepository settingRepository) {
+        this.settingRepository = settingRepository;
     }
 
-    public Optional<SettingDTO> findById(Long id) {
-        return settingRepository.findById(id)
-                .map(setting -> modelMapper.map(setting, SettingDTO.class));
+    // Anahtar ile bir ayarı getirir
+    public Optional<Setting> getSettingByKey(String settingKey) {
+        return settingRepository.findBySettingKey(settingKey);
     }
 
-    public SettingDTO findBySettingKey(String settingKey) {
-        Setting setting = settingRepository.findBySettingKey(settingKey);
-        return modelMapper.map(setting, SettingDTO.class);
+    // Anahtar ile ayarın var olup olmadığını kontrol eder
+    public boolean existsSettingByKey(String settingKey) {
+        return settingRepository.existsBySettingKey(settingKey);
     }
 
-    public SettingDTO save(SettingDTO settingDTO) {
-        Setting setting = modelMapper.map(settingDTO, Setting.class);
-        Setting savedSetting = settingRepository.save(setting);
-        return modelMapper.map(savedSetting, SettingDTO.class);
+    // Değer ile ayarı getirir
+    public Optional<Setting> getSettingByValue(String settingValue) {
+        return settingRepository.findBySettingValue(settingValue);
     }
 
-    @Transactional
-    public void softDelete(Long id, String deletedBy) {
-        Optional<Setting> settingOptional = settingRepository.findById(id);
-        if (settingOptional.isPresent()) {
-            Setting setting = settingOptional.get();
-            setting.setDeletedAt(java.time.LocalDateTime.now());
-            setting.setDeletedBy(deletedBy);
-            settingRepository.save(setting);
+    // Aktif tüm ayarları getirir (silinmiş olmayanlar)
+    public List<Setting> getAllActiveSettings() {
+        return settingRepository.findAllActiveSettings();
+    }
+
+    // Aktif ayarların sayısını döndürür
+    public long countActiveSettings() {
+        return settingRepository.countActiveSettings();
+    }
+
+    // Yeni bir ayar ekler
+    public Setting addSetting(Setting setting) {
+        return settingRepository.save(setting);
+    }
+
+    // Mevcut bir ayarı günceller
+    public Setting updateSetting(Setting setting) {
+        if (settingRepository.existsById(setting.getId())) {
+            return settingRepository.save(setting);
+        }
+        throw new IllegalArgumentException("Ayar bulunamadı.");
+    }
+
+    // Bir ayarı siler (silinmiş olarak işaretler)
+    public void deleteSetting(Long settingId) {
+        Optional<Setting> setting = settingRepository.findById(settingId);
+        if (setting.isPresent()) {
+            Setting existingSetting = setting.get();
+            existingSetting.setDeletedAt(java.time.LocalDateTime.now()); // Silindi olarak işaretle
+            settingRepository.save(existingSetting);
+        } else {
+            throw new IllegalArgumentException("Ayar bulunamadı.");
         }
     }
 }

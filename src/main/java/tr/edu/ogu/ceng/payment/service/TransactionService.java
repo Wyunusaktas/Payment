@@ -1,94 +1,70 @@
 package tr.edu.ogu.ceng.payment.service;
 
-import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
-import org.springframework.stereotype.Service;
-import tr.edu.ogu.ceng.payment.dto.TransactionDTO;
-import tr.edu.ogu.ceng.payment.repository.TransactionRepository;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import tr.edu.ogu.ceng.payment.entity.Transaction;
+import tr.edu.ogu.ceng.payment.repository.TransactionRepository;
 
 @Service
-@RequiredArgsConstructor
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
-    private final ModelMapper modelMapper;
 
-    // Mevcut metodlar korundu
-    // ...
-
-    // Yeni metodlar eklendi
-    public List<TransactionDTO> findTransactionsByPayment(Long paymentId) {
-        return transactionRepository.findByPaymentPaymentId(paymentId)
-                .stream()
-                .map(transaction -> modelMapper.map(transaction, TransactionDTO.class))
-                .collect(Collectors.toList());
+    @Autowired
+    public TransactionService(TransactionRepository transactionRepository) {
+        this.transactionRepository = transactionRepository;
     }
 
-    public List<TransactionDTO> findTransactionsByOrder(UUID orderId) {
-        return transactionRepository.findByOrderId(orderId)
-                .stream()
-                .map(transaction -> modelMapper.map(transaction, TransactionDTO.class))
-                .collect(Collectors.toList());
+    // Belirli bir ödeme ID'sine ait tüm işlemleri getirir
+    public List<Transaction> getTransactionsByPaymentId(UUID paymentId) {
+        return transactionRepository.findByPayment_PaymentId(paymentId);
     }
 
-    public List<TransactionDTO> findTransactionsByStatus(String status) {
-        return transactionRepository.findByStatus(status)
-                .stream()
-                .map(transaction -> modelMapper.map(transaction, TransactionDTO.class))
-                .collect(Collectors.toList());
+    // İşlem durumuna göre işlemleri getirir
+    public List<Transaction> getTransactionsByStatus(String status) {
+        return transactionRepository.findByStatus(status);
     }
 
-    public List<TransactionDTO> findTransactionsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
-        return transactionRepository.findByTransactionDateBetween(startDate, endDate)
-                .stream()
-                .map(transaction -> modelMapper.map(transaction, TransactionDTO.class))
-                .collect(Collectors.toList());
+    // Belirli bir tarih aralığındaki işlemleri getirir
+    public List<Transaction> getTransactionsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
+        return transactionRepository.findByTransactionDateBetween(startDate, endDate);
     }
 
-    public List<TransactionDTO> findTransactionsByAmountRange(
-            String status, BigDecimal minAmount, BigDecimal maxAmount, LocalDateTime startDate) {
-        return transactionRepository.findTransactionsByStatusAmountRangeAndDate(status, minAmount, maxAmount, startDate)
-                .stream()
-                .map(transaction -> modelMapper.map(transaction, TransactionDTO.class))
-                .collect(Collectors.toList());
+    // Tüm işlemlerin toplam tutarını hesaplar
+    public BigDecimal calculateTotalTransactionAmount() {
+        return transactionRepository.calculateTotalTransactionAmount();
     }
 
-    public List<Object[]> getTransactionSummaryByDate() {
-        return transactionRepository.getTransactionSummaryByDate();
+    // Belirli bir ödeme ID'sine ait toplam işlem tutarını hesaplar
+    public BigDecimal calculateTotalAmountByPaymentId(UUID paymentId) {
+        return transactionRepository.calculateTotalAmountByPaymentId(paymentId);
     }
 
-    public BigDecimal calculateTotalAmountByCurrency(Long currencyId) {
-        return transactionRepository.calculateTotalAmountByCurrency(currencyId);
+    // Yeni işlem kaydı ekler
+    public Transaction addTransaction(Transaction transaction) {
+        return transactionRepository.save(transaction);
     }
 
-    public List<TransactionDTO> findRecentTransactions(int count) {
-        return transactionRepository.findTopNByOrderByTransactionDateDesc(count)
-                .stream()
-                .map(transaction -> modelMapper.map(transaction, TransactionDTO.class))
-                .collect(Collectors.toList());
+    // İşlem kaydını günceller
+    public Transaction updateTransaction(Transaction transaction) {
+        if (transactionRepository.existsById(transaction.getTransactionId())) {
+            return transactionRepository.save(transaction);
+        }
+        throw new IllegalArgumentException("İşlem bulunamadı.");
     }
 
-    public List<TransactionDTO> findRecentFailedTransactions(LocalDateTime startDate) {
-        return transactionRepository.findRecentFailedTransactions(startDate)
-                .stream()
-                .map(transaction -> modelMapper.map(transaction, TransactionDTO.class))
-                .collect(Collectors.toList());
-    }
-
-    public List<TransactionDTO> findAboveAverageTransactions() {
-        return transactionRepository.findAboveAverageTransactions()
-                .stream()
-                .map(transaction -> modelMapper.map(transaction, TransactionDTO.class))
-                .collect(Collectors.toList());
-    }
-
-    public Long countDailyTransactionsByOrder(UUID orderId) {
-        return transactionRepository.countDailyTransactionsByOrder(orderId);
+    // İşlem kaydını siler
+    public void deleteTransaction(UUID transactionId) {
+        if (transactionRepository.existsById(transactionId)) {
+            transactionRepository.deleteById(transactionId);
+        } else {
+            throw new IllegalArgumentException("İşlem bulunamadı.");
+        }
     }
 }

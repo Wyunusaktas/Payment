@@ -1,25 +1,27 @@
 package tr.edu.ogu.ceng.payment.entity;
 
-import jakarta.persistence.*;
+import java.time.LocalDate;
+import java.util.UUID;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.Where;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "payment_methods")
 @NoArgsConstructor
 @Data
-@Where(clause = "deleted_at IS NULL")
-public class PaymentMethod extends BaseEntity {
+public class PaymentMethod {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "method_id")
-    private Long methodId;  // UUID yerine Long
+    private UUID methodId;
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;
@@ -33,16 +35,9 @@ public class PaymentMethod extends BaseEntity {
     @Column(name = "account_number", nullable = false, length = 100)
     private String accountNumber;
 
-    @Column(name = "expiry_date", nullable = false)
+    @Column(name = "expiry_date", nullable = true)
     private LocalDate expiryDate;
 
     @Column(name = "is_default", nullable = false)
     private boolean isDefault;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
 }
-

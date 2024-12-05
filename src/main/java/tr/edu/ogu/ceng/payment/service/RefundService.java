@@ -1,50 +1,70 @@
 package tr.edu.ogu.ceng.payment.service;
 
-import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import tr.edu.ogu.ceng.payment.dto.RefundDTO;
+
 import tr.edu.ogu.ceng.payment.entity.Refund;
 import tr.edu.ogu.ceng.payment.repository.RefundRepository;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-@RequiredArgsConstructor
 @Service
 public class RefundService {
 
     private final RefundRepository refundRepository;
-    private final ModelMapper modelMapper;
 
-    public List<RefundDTO> findAll() {
-        return refundRepository.findAll()
-                .stream()
-                .map(refund -> modelMapper.map(refund, RefundDTO.class))
-                .collect(Collectors.toList());
+    @Autowired
+    public RefundService(RefundRepository refundRepository) {
+        this.refundRepository = refundRepository;
     }
 
-    public Optional<RefundDTO> findById(Long id) {
-        return refundRepository.findById(id)
-                .map(refund -> modelMapper.map(refund, RefundDTO.class));
+    // Belirli bir ödeme ID'sine ait iadeleri getirir
+    public List<Refund> getRefundsByPaymentId(UUID paymentId) {
+        return refundRepository.findByPayment_PaymentId(paymentId);
     }
 
-    public RefundDTO save(RefundDTO refundDTO) {
-        Refund refund = modelMapper.map(refundDTO, Refund.class);
-        Refund savedRefund = refundRepository.save(refund);
-        return modelMapper.map(savedRefund, RefundDTO.class);
+    // İade durumuna göre iadeleri getirir
+    public List<Refund> getRefundsByStatus(String status) {
+        return refundRepository.findByStatus(status);
     }
 
-    @Transactional
-    public void softDelete(Long id, String deletedBy) {
-        Optional<Refund> refundOptional = refundRepository.findById(id);
-        if (refundOptional.isPresent()) {
-            Refund refund = refundOptional.get();
-            refund.setDeletedAt(java.time.LocalDateTime.now());
-            refund.setDeletedBy(deletedBy);
-            refundRepository.save(refund);
+    // Belirli bir tarih aralığındaki iadeleri getirir
+    public List<Refund> getRefundsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
+        return refundRepository.findByRefundDateBetween(startDate, endDate);
+    }
+
+    // Tüm iadelerin toplam tutarını hesaplar
+    public BigDecimal calculateTotalRefundAmount() {
+        return refundRepository.calculateTotalRefundAmount();
+    }
+
+    // Belirli bir durumdaki iadelerin toplam tutarını hesaplar
+    public BigDecimal calculateTotalRefundAmountByStatus(String status) {
+        return refundRepository.calculateTotalRefundAmountByStatus(status);
+    }
+
+    // Yeni iade kaydı ekler
+    public Refund addRefund(Refund refund) {
+        return refundRepository.save(refund);
+    }
+
+    // İade kaydını günceller
+    public Refund updateRefund(Refund refund) {
+        if (refundRepository.existsById(refund.getRefundId())) {
+            return refundRepository.save(refund);
+        }
+        throw new IllegalArgumentException("İade bulunamadı.");
+    }
+
+    // İade kaydını siler
+    public void deleteRefund(UUID refundId) {
+        if (refundRepository.existsById(refundId)) {
+            refundRepository.deleteById(refundId);
+        } else {
+            throw new IllegalArgumentException("İade bulunamadı.");
         }
     }
 }

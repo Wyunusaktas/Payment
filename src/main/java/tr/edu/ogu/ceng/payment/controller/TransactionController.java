@@ -1,127 +1,106 @@
 package tr.edu.ogu.ceng.payment.controller;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import tr.edu.ogu.ceng.payment.dto.TransactionDTO;
-import tr.edu.ogu.ceng.payment.service.TransactionService;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import tr.edu.ogu.ceng.payment.entity.Transaction;
+import tr.edu.ogu.ceng.payment.service.TransactionService;
+
 @RestController
-@RequiredArgsConstructor
-@RequestMapping("/api/v1/transactions")
+@RequestMapping("/api/transactions")
 public class TransactionController {
 
     private final TransactionService transactionService;
 
-    // Temel CRUD operasyonları
-    @GetMapping
-    public ResponseEntity<List<TransactionDTO>> getAllTransactions() {
-        return ResponseEntity.ok(transactionService.findAll());
+    @Autowired
+    public TransactionController(TransactionService transactionService) {
+        this.transactionService = transactionService;
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<TransactionDTO> getTransaction(@PathVariable Long id) {
-        return transactionService.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @PostMapping
-    public ResponseEntity<TransactionDTO> createTransaction(@RequestBody TransactionDTO transactionDTO) {
-        return ResponseEntity.ok(transactionService.save(transactionDTO));
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<TransactionDTO> updateTransaction(
-            @PathVariable Long id,
-            @RequestBody TransactionDTO transactionDTO) {
-        transactionDTO.setTransactionId(id);
-        return ResponseEntity.ok(transactionService.save(transactionDTO));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTransaction(@PathVariable Long id) {
-        transactionService.softDelete(id, "system");
-        return ResponseEntity.noContent().build();
-    }
-
-    // Ödeme bazlı sorgular
+    // Get all transactions by payment ID
     @GetMapping("/payment/{paymentId}")
-    public ResponseEntity<List<TransactionDTO>> getTransactionsByPayment(@PathVariable Long paymentId) {
-        return ResponseEntity.ok(transactionService.findTransactionsByPayment(paymentId));
+    public ResponseEntity<List<Transaction>> getTransactionsByPaymentId(@PathVariable UUID paymentId) {
+        List<Transaction> transactions = transactionService.getTransactionsByPaymentId(paymentId);
+        return transactions.isEmpty() ? 
+                new ResponseEntity<>(HttpStatus.NO_CONTENT) : 
+                new ResponseEntity<>(transactions, HttpStatus.OK);
     }
 
-    // Sipariş bazlı sorgular
-    @GetMapping("/order/{orderId}")
-    public ResponseEntity<List<TransactionDTO>> getTransactionsByOrder(@PathVariable UUID orderId) {
-        return ResponseEntity.ok(transactionService.findTransactionsByOrder(orderId));
-    }
-
-    @GetMapping("/order/{orderId}/daily-count")
-    public ResponseEntity<Long> getDailyTransactionCountByOrder(@PathVariable UUID orderId) {
-        return ResponseEntity.ok(transactionService.countDailyTransactionsByOrder(orderId));
-    }
-
-    // Durum bazlı sorgular
+    // Get transactions by status
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<TransactionDTO>> getTransactionsByStatus(@PathVariable String status) {
-        return ResponseEntity.ok(transactionService.findTransactionsByStatus(status));
+    public ResponseEntity<List<Transaction>> getTransactionsByStatus(@PathVariable String status) {
+        List<Transaction> transactions = transactionService.getTransactionsByStatus(status);
+        return transactions.isEmpty() ? 
+                new ResponseEntity<>(HttpStatus.NO_CONTENT) : 
+                new ResponseEntity<>(transactions, HttpStatus.OK);
     }
 
-    @GetMapping("/failed")
-    public ResponseEntity<List<TransactionDTO>> getRecentFailedTransactions(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate) {
-        return ResponseEntity.ok(transactionService.findRecentFailedTransactions(startDate));
-    }
-
-    // Tarih bazlı sorgular
+    // Get transactions within a date range
     @GetMapping("/date-range")
-    public ResponseEntity<List<TransactionDTO>> getTransactionsByDateRange(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
-        return ResponseEntity.ok(transactionService.findTransactionsByDateRange(startDate, endDate));
+    public ResponseEntity<List<Transaction>> getTransactionsByDateRange(
+            @RequestParam LocalDateTime startDate,
+            @RequestParam LocalDateTime endDate) {
+        List<Transaction> transactions = transactionService.getTransactionsByDateRange(startDate, endDate);
+        return transactions.isEmpty() ? 
+                new ResponseEntity<>(HttpStatus.NO_CONTENT) : 
+                new ResponseEntity<>(transactions, HttpStatus.OK);
     }
 
-    // Tutar bazlı sorgular
-    @GetMapping("/search/amount-range")
-    public ResponseEntity<List<TransactionDTO>> searchTransactionsByAmountRange(
-            @RequestParam String status,
-            @RequestParam BigDecimal minAmount,
-            @RequestParam BigDecimal maxAmount,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate) {
-        return ResponseEntity.ok(
-                transactionService.findTransactionsByAmountRange(status, minAmount, maxAmount, startDate)
-        );
+    // Calculate total transaction amount
+    @GetMapping("/total")
+    public ResponseEntity<BigDecimal> calculateTotalTransactionAmount() {
+        BigDecimal totalAmount = transactionService.calculateTotalTransactionAmount();
+        return new ResponseEntity<>(totalAmount, HttpStatus.OK);
     }
 
-    @GetMapping("/above-average")
-    public ResponseEntity<List<TransactionDTO>> getAboveAverageTransactions() {
-        return ResponseEntity.ok(transactionService.findAboveAverageTransactions());
+    // Calculate total amount by payment ID
+    @GetMapping("/total/{paymentId}")
+    public ResponseEntity<BigDecimal> calculateTotalAmountByPaymentId(@PathVariable UUID paymentId) {
+        BigDecimal totalAmount = transactionService.calculateTotalAmountByPaymentId(paymentId);
+        return new ResponseEntity<>(totalAmount, HttpStatus.OK);
     }
 
-    // Analitik sorgular
-    @GetMapping("/summary/daily")
-    public ResponseEntity<List<Object[]>> getDailyTransactionSummary() {
-        return ResponseEntity.ok(transactionService.getTransactionSummaryByDate());
+    // Add a new transaction
+    @PostMapping
+    public ResponseEntity<Transaction> addTransaction(@RequestBody Transaction transaction) {
+        Transaction savedTransaction = transactionService.addTransaction(transaction);
+        return new ResponseEntity<>(savedTransaction, HttpStatus.CREATED);
     }
 
-    @GetMapping("/currency/{currencyId}/total")
-    public ResponseEntity<BigDecimal> getTotalAmountByCurrency(@PathVariable Long currencyId) {
-        return ResponseEntity.ok(transactionService.calculateTotalAmountByCurrency(currencyId));
+    // Update an existing transaction
+    @PutMapping
+    public ResponseEntity<Transaction> updateTransaction(@RequestBody Transaction transaction) {
+        try {
+            Transaction updatedTransaction = transactionService.updateTransaction(transaction);
+            return new ResponseEntity<>(updatedTransaction, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 
-    // Son işlemler
-    @GetMapping("/recent")
-    public ResponseEntity<List<TransactionDTO>> getRecentTransactions(
-            @RequestParam(defaultValue = "10") int count) {
-        return ResponseEntity.ok(transactionService.findRecentTransactions(count));
+    // Delete a transaction by ID
+    @DeleteMapping("/{transactionId}")
+    public ResponseEntity<Void> deleteTransaction(@PathVariable UUID transactionId) {
+        try {
+            transactionService.deleteTransaction(transactionId);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 }

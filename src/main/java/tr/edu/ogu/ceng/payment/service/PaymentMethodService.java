@@ -1,50 +1,74 @@
 package tr.edu.ogu.ceng.payment.service;
 
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import tr.edu.ogu.ceng.payment.dto.PaymentMethodDTO;
+
 import tr.edu.ogu.ceng.payment.entity.PaymentMethod;
 import tr.edu.ogu.ceng.payment.repository.PaymentMethodRepository;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-@RequiredArgsConstructor
 @Service
 public class PaymentMethodService {
 
     private final PaymentMethodRepository paymentMethodRepository;
-    private final ModelMapper modelMapper;
 
-    public List<PaymentMethodDTO> findAll() {
-        return paymentMethodRepository.findAll()
-                .stream()
-                .map(paymentMethod -> modelMapper.map(paymentMethod, PaymentMethodDTO.class))
-                .collect(Collectors.toList());
+    @Autowired
+    public PaymentMethodService(PaymentMethodRepository paymentMethodRepository) {
+        this.paymentMethodRepository = paymentMethodRepository;
     }
 
-    public Optional<PaymentMethodDTO> findById(Long id) {
-        return paymentMethodRepository.findById(id)
-                .map(paymentMethod -> modelMapper.map(paymentMethod, PaymentMethodDTO.class));
+    // Kullanıcıya ait tüm ödeme yöntemlerini getirir
+    public List<PaymentMethod> getAllPaymentMethodsByUserId(UUID userId) {
+        return paymentMethodRepository.findByUserId(userId);
     }
 
-    public PaymentMethodDTO save(PaymentMethodDTO paymentMethodDTO) {
-        PaymentMethod paymentMethod = modelMapper.map(paymentMethodDTO, PaymentMethod.class);
-        PaymentMethod savedPaymentMethod = paymentMethodRepository.save(paymentMethod);
-        return modelMapper.map(savedPaymentMethod, PaymentMethodDTO.class);
+    // Kullanıcının varsayılan ödeme yöntemini getirir
+    public PaymentMethod getDefaultPaymentMethod(UUID userId) {
+        return paymentMethodRepository.findByUserIdAndIsDefaultTrue(userId);
     }
 
-    @Transactional
-    public void softDelete(Long id, String deletedBy) {
-        Optional<PaymentMethod> paymentMethodOptional = paymentMethodRepository.findById(id);
-        if (paymentMethodOptional.isPresent()) {
-            PaymentMethod paymentMethod = paymentMethodOptional.get();
-            paymentMethod.setDeletedAt(java.time.LocalDateTime.now());
-            paymentMethod.setDeletedBy(deletedBy);
-            paymentMethodRepository.save(paymentMethod);
+    // Ödeme türüne göre ödeme yöntemlerini getirir
+    public List<PaymentMethod> getPaymentMethodsByType(String type) {
+        return paymentMethodRepository.findByType(type);
+    }
+
+    // Sağlayıcıya göre ödeme yöntemlerini getirir
+    public List<PaymentMethod> getPaymentMethodsByProvider(String provider) {
+        return paymentMethodRepository.findByProvider(provider);
+    }
+
+    // Yeni ödeme yöntemi ekler
+    public PaymentMethod addPaymentMethod(PaymentMethod paymentMethod) {
+        return paymentMethodRepository.save(paymentMethod);
+    }
+
+    // Ödeme yöntemini günceller
+    public PaymentMethod updatePaymentMethod(PaymentMethod paymentMethod) {
+        if (paymentMethodRepository.existsById(paymentMethod.getMethodId())) {
+            return paymentMethodRepository.save(paymentMethod);
         }
+        throw new IllegalArgumentException("Ödeme yöntemi bulunamadı.");
+    }
+
+    // Ödeme yöntemini siler
+    public void deletePaymentMethod(UUID id) {
+        if (paymentMethodRepository.existsById(id)) {
+            paymentMethodRepository.deleteById(id);
+        } else {
+            throw new IllegalArgumentException("Ödeme yöntemi bulunamadı.");
+        }
+    }
+
+    // Kullanıcıya ait bir ödeme yöntemi var mı diye kontrol eder
+    public boolean existsByUserId(UUID userId) {
+        return !paymentMethodRepository.findByUserId(userId).isEmpty();
+    }
+
+    // Ödeme yöntemini ID ile getirir
+    public Optional<PaymentMethod> getPaymentMethodById(UUID id) {
+        return paymentMethodRepository.findById(id);
     }
 }

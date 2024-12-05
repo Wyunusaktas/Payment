@@ -1,11 +1,9 @@
 package tr.edu.ogu.ceng.payment.repository;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,135 +17,128 @@ import tr.edu.ogu.ceng.payment.entity.Setting;
 @SpringBootTest
 public class SettingRepositoryTest {
 
+    // Testcontainers PostgreSQL container setup
     public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:16-alpine");
 
     @Autowired
     private SettingRepository settingRepository;
 
-    private Setting setting1;
-    private Setting setting2;
-
     static {
+        // Start PostgreSQL container
         postgreSQLContainer.start();
     }
 
-    @BeforeEach
-    void setUp() {
-        setting1 = new Setting();
-        setting1.setSettingKey("payment.gateway.url");
-        setting1.setSettingValue("https://payment.example.com");
-        settingRepository.save(setting1);
-
-        setting2 = new Setting();
-        setting2.setSettingKey("max.retry.attempts");
-        setting2.setSettingValue("3");
-        settingRepository.save(setting2);
+    @DynamicPropertySource
+    static void setProperties(DynamicPropertyRegistry registry) {
+        // Set properties for Spring to connect to the containerized PostgreSQL instance
+        registry.add("spring.datasource.url", postgreSQLContainer::getJdbcUrl);
+        registry.add("spring.datasource.username", postgreSQLContainer::getUsername);
+        registry.add("spring.datasource.password", postgreSQLContainer::getPassword);
     }
 
-    @Test
-    public void testFindById() {
-        Optional<Setting> found = settingRepository.findById(setting1.getId());
-
-        assertThat(found).isPresent();
-        assertThat(found.get().getSettingKey()).isEqualTo(setting1.getSettingKey());
+    @BeforeEach
+    public void setUp() {
+        // Clean up before each test
+        settingRepository.deleteAll();
     }
 
     @Test
     public void testFindBySettingKey() {
-        Setting found = settingRepository.findBySettingKey("payment.gateway.url");
-
-        assertThat(found).isNotNull();
-        assertThat(found.getSettingValue()).isEqualTo("https://payment.example.com");
-    }
-
-    @Test
-    public void testFindAll() {
-        List<Setting> settings = settingRepository.findAll();
-
-        assertThat(settings).hasSize(2);
-    }
-
-    @Test
-    public void testSaveNewSetting() {
-        Setting newSetting = new Setting();
-        newSetting.setSettingKey("timeout.seconds");
-        newSetting.setSettingValue("30");
-
-        Setting saved = settingRepository.save(newSetting);
-
-        assertThat(saved.getId()).isNotNull();
-        assertThat(saved.getSettingKey()).isEqualTo("timeout.seconds");
-    }
-
-    @Test
-    public void testUpdateExistingSetting() {
-        Setting setting = settingRepository.findBySettingKey("payment.gateway.url");
-        setting.setSettingValue("https://new-payment.example.com");
+        // Given: create and save a setting
+        Setting setting = new Setting();
+        setting.setSettingKey("key1");
+        setting.setSettingValue("value1");
         settingRepository.save(setting);
 
-        Setting updated = settingRepository.findBySettingKey("payment.gateway.url");
-        assertThat(updated.getSettingValue()).isEqualTo("https://new-payment.example.com");
+        // When: fetch the setting by its key
+        Optional<Setting> fetchedSetting = settingRepository.findBySettingKey("key1");
+
+        // Then: check if the setting exists and its value
+        assertThat(fetchedSetting).isPresent();
+        assertThat(fetchedSetting.get().getSettingValue()).isEqualTo("value1");
     }
 
     @Test
-    public void testSoftDelete() {
-        Setting setting = settingRepository.findById(setting1.getId()).orElseThrow();
-        setting.setDeletedAt(LocalDateTime.now());
-        setting.setDeletedBy("testUser");
+    public void testExistsBySettingKey() {
+        // Given: create and save a setting
+        Setting setting = new Setting();
+        setting.setSettingKey("key2");
+        setting.setSettingValue("value2");
         settingRepository.save(setting);
 
-        Optional<Setting> deleted = settingRepository.findById(setting1.getId());
-        assertThat(deleted).isEmpty();
+        // When: check if the setting exists by its key
+        boolean exists = settingRepository.existsBySettingKey("key2");
+
+        // Then: validate that the setting exists
+        assertThat(exists).isTrue();
     }
 
     @Test
-    public void testFindBySettingKeyContaining() {
-        List<Setting> settings = settingRepository.findBySettingKeyContaining("payment");
+    public void testFindBySettingValue() {
+        // Given: create and save a setting
+        Setting setting = new Setting();
+        setting.setSettingKey("key3");
+        setting.setSettingValue("value3");
+        settingRepository.save(setting);
 
-        assertThat(settings).hasSize(1);
-        assertThat(settings.get(0).getSettingKey()).contains("payment");
+        // When: fetch the setting by its value
+        Optional<Setting> fetchedSetting = settingRepository.findBySettingValue("value3");
+
+        // Then: check if the setting is found and its key
+        assertThat(fetchedSetting).isPresent();
+        assertThat(fetchedSetting.get().getSettingKey()).isEqualTo("key3");
     }
 
     @Test
-    public void testFindBySettingKeyStartingWith() {
-        List<Setting> settings = settingRepository.findBySettingKeyStartingWith("max");
+    public void testFindAllActiveSettings() {
+        // Given: create and save settings
+        Setting setting1 = new Setting();
+        setting1.setSettingKey("key4");
+        setting1.setSettingValue("value4");
+        setting1.setDeletedAt(null);
+        settingRepository.save(setting1);
 
-        assertThat(settings).hasSize(1);
-        assertThat(settings.get(0).getSettingKey()).startsWith("max");
+        Setting setting2 = new Setting();
+        setting2.setSettingKey("key5");
+        setting2.setSettingValue("value5");
+        setting2.setDeletedAt(null);
+        settingRepository.save(setting2);
+
+        // When: fetch all active settings
+        List<Setting> activeSettings = settingRepository.findAllActiveSettings();
+
+        // Then: ensure both active settings are returned
+        assertThat(activeSettings).hasSize(2);
     }
 
     @Test
-    public void testFindBySettingValueContaining() {
-        List<Setting> settings = settingRepository.findBySettingValueContaining("example");
+    public void testCountActiveSettings() {
+        // Given: create and save settings
+        Setting setting1 = new Setting();
+        setting1.setSettingKey("key6");
+        setting1.setSettingValue("value6");
+        setting1.setDeletedAt(null);
+        settingRepository.save(setting1);
 
-        assertThat(settings).hasSize(1);
-        assertThat(settings.get(0).getSettingValue()).contains("example");
+        Setting setting2 = new Setting();
+        setting2.setSettingKey("key7");
+        setting2.setSettingValue("value7");
+        setting2.setDeletedAt(null);
+        settingRepository.save(setting2);
+
+        // When: count the total active settings
+        long activeSettingsCount = settingRepository.countActiveSettings();
+
+        // Then: ensure the active settings count is correct
+        assertThat(activeSettingsCount).isEqualTo(2);
     }
 
     @Test
-    public void testDeleteAndVerifyNotFound() {
-        Setting setting = settingRepository.findBySettingKey("payment.gateway.url");
-        settingRepository.delete(setting);
+    public void testFindBySettingKeyNotFound() {
+        // When: try to find a non-existing setting by its key
+        Optional<Setting> fetchedSetting = settingRepository.findBySettingKey("nonExistingKey");
 
-        Setting deleted = settingRepository.findBySettingKey("payment.gateway.url");
-        assertThat(deleted).isNull();
-    }
-
-    @Test
-    public void testUniqueSettingKey() {
-        Setting duplicateSetting = new Setting();
-        duplicateSetting.setSettingKey("payment.gateway.url");
-        duplicateSetting.setSettingValue("https://another.example.com");
-
-        assertThrows(Exception.class, () -> {
-            settingRepository.save(duplicateSetting);
-        });
-    }
-
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgreSQLContainer::getJdbcUrl);
-        registry.add("spring.datasource.username", postgreSQLContainer::getUsername);
-        registry.add("spring.datasource.password", postgreSQLContainer::getPassword);
+        // Then: check if the result is empty
+        assertThat(fetchedSetting).isNotPresent();
     }
 }

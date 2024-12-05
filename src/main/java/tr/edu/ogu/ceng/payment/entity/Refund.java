@@ -1,26 +1,33 @@
 package tr.edu.ogu.ceng.payment.entity;
 
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.hibernate.annotations.Where;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne; // Import CascadeType
+import jakarta.persistence.Table;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "refunds")
 @NoArgsConstructor
 @Data
-@Where(clause = "deleted_at IS NULL")
-public class Refund extends BaseEntity {
+public class Refund {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "refund_id")
-    private Long refundId;  // UUID yerine Long
+    private UUID refundId;
 
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.PERSIST) // Add CascadeType.PERSIST
     @JoinColumn(name = "payment_id", referencedColumnName = "payment_id")
     private Payment payment;
 
@@ -35,10 +42,4 @@ public class Refund extends BaseEntity {
 
     @Column(name = "refund_date", nullable = false)
     private LocalDateTime refundDate;
-
-    @Column(name = "refund_method", length = 50)
-    private String refundMethod;
-
-    @Column(name = "refund_issued_at")
-    private LocalDateTime refundIssuedAt;
 }

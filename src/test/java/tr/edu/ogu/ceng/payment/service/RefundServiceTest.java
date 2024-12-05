@@ -1,160 +1,209 @@
 package tr.edu.ogu.ceng.payment.service;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.dto.RefundDTO;
-import tr.edu.ogu.ceng.payment.entity.Refund;
-import tr.edu.ogu.ceng.payment.repository.RefundRepository;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
+import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.MockitoAnnotations;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
-@ExtendWith(SpringExtension.class)
+import tr.edu.ogu.ceng.payment.entity.Payment;
+import tr.edu.ogu.ceng.payment.entity.Refund;
+import tr.edu.ogu.ceng.payment.repository.PaymentRepository;
+import tr.edu.ogu.ceng.payment.repository.RefundRepository;
+
 public class RefundServiceTest {
 
-    @MockBean
+    @Mock
     private RefundRepository refundRepository;
 
-    @Autowired
+    @Mock
+    private PaymentRepository paymentRepository;
+
+    @InjectMocks
     private RefundService refundService;
 
-    @Autowired
-    private ModelMapper modelMapper;
-
-    private RefundDTO refundDTO;
+    private UUID paymentId;
+    private UUID refundId;
+    private Refund refund;
+    private Payment payment;
 
     @BeforeEach
-    void setUp() {
-        reset(refundRepository);
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);  // Mockito mocks'larını başlat
 
-        refundDTO = new RefundDTO();
-        refundDTO.setRefundId(1L);
-        refundDTO.setRefundAmount(BigDecimal.valueOf(50.00));
-        refundDTO.setRefundReason("Product returned");
-        refundDTO.setStatus("Pending");
-        refundDTO.setRefundDate(LocalDateTime.now());
-        refundDTO.setRefundMethod("Bank Transfer");
-    }
+        // Test için örnek Payment nesnesi oluşturuyoruz
+        payment = new Payment();
+        payment.setUserId(UUID.randomUUID());
+        payment.setAmount(BigDecimal.valueOf(100.00));
+        payment.setStatus("COMPLETED");
+        payment.setTransactionDate(LocalDateTime.now());
+        payment.setDescription("Test Payment");
+        payment.setRecurring(false);
+        payment.setPaymentChannel("Online");
 
-    @Test
-    void testCreateRefund() {
-        Refund refund = modelMapper.map(refundDTO, Refund.class);
-        when(refundRepository.save(any(Refund.class))).thenReturn(refund);
+        // Payment nesnesi save edilmesi bekleniyor
+        when(paymentRepository.save(payment)).thenReturn(payment);
+        paymentId = payment.getPaymentId();  // paymentId burada alınır
 
-        RefundDTO createdRefundDTO = refundService.save(refundDTO);
-
-        assertNotNull(createdRefundDTO, "Refund creation failed, returned object is null.");
-        assertEquals(refundDTO.getRefundId(), createdRefundDTO.getRefundId());
-        verify(refundRepository, times(1)).save(any(Refund.class));
-    }
-
-    @Test
-    void testFindRefundById_NotFound() {
-        when(refundRepository.findById(anyLong())).thenReturn(Optional.empty());
-
-        Optional<RefundDTO> foundRefundDTO = refundService.findById(999L);
-
-        assertFalse(foundRefundDTO.isPresent(), "Refund should not be found.");
-        verify(refundRepository, times(1)).findById(999L);
-    }
-
-    @Test
-    void testFindRefundById() {
-        Refund refund = modelMapper.map(refundDTO, Refund.class);
-        when(refundRepository.findById(refundDTO.getRefundId())).thenReturn(Optional.of(refund));
-
-        Optional<RefundDTO> foundRefundDTO = refundService.findById(refundDTO.getRefundId());
-
-        assertTrue(foundRefundDTO.isPresent(), "Refund not found.");
-        assertEquals(refundDTO.getRefundId(), foundRefundDTO.get().getRefundId());
-        verify(refundRepository, times(1)).findById(refundDTO.getRefundId());
-    }
-
-    @Test
-    void testUpdateRefund() {
-        refundDTO.setStatus("Approved");
-        Refund updatedRefund = modelMapper.map(refundDTO, Refund.class);
-
-        when(refundRepository.save(any(Refund.class))).thenReturn(updatedRefund);
-
-        RefundDTO updatedRefundDTO = refundService.save(refundDTO);
-
-        assertNotNull(updatedRefundDTO, "Refund update failed, returned object is null.");
-        assertEquals("Approved", updatedRefundDTO.getStatus(), "Status did not update correctly.");
-        verify(refundRepository, times(1)).save(any(Refund.class));
-    }
-
-    @Test
-    void testSoftDeleteRefund() {
-        Refund refund = modelMapper.map(refundDTO, Refund.class);
-        ArgumentCaptor<Refund> captor = ArgumentCaptor.forClass(Refund.class);
-
-        when(refundRepository.findById(refundDTO.getRefundId())).thenReturn(Optional.of(refund));
-        when(refundRepository.save(any(Refund.class))).thenReturn(refund);
-
-        refundService.softDelete(refundDTO.getRefundId(), "testUser");
-
-        verify(refundRepository, times(1)).findById(refundDTO.getRefundId());
-        verify(refundRepository, times(1)).save(captor.capture());
-
-        Refund softDeletedRefund = captor.getValue();
-        assertNotNull(softDeletedRefund.getDeletedAt(), "DeletedAt should not be null after soft delete.");
-        assertEquals("testUser", softDeletedRefund.getDeletedBy(), "DeletedBy should match the given user.");
-    }
-
-    @Test
-    void testSoftDeleteRefund_NotFound() {
-        when(refundRepository.findById(anyLong())).thenReturn(Optional.empty());
-
-        refundService.softDelete(999L, "testUser");
-
-        verify(refundRepository, times(1)).findById(999L);
-        verify(refundRepository, never()).save(any(Refund.class));
-    }
-
-    @Test
-    void testFindAllRefunds() {
-        Refund refund = modelMapper.map(refundDTO, Refund.class);
-        when(refundRepository.findAll()).thenReturn(List.of(refund));
-
-        List<RefundDTO> refundDTOList = refundService.findAll();
-
-        assertNotNull(refundDTOList, "Refund list is null.");
-        assertFalse(refundDTOList.isEmpty(), "Refund list is empty.");
-        assertEquals(1, refundDTOList.size(), "Refund list size mismatch.");
-        verify(refundRepository, times(1)).findAll();
-    }
-
-    @Test
-    void testFindByIdReturnsRefund() {
-        Refund refund = modelMapper.map(refundDTO, Refund.class);
+        // Test için örnek Refund nesnesi oluşturuyoruz
+        refundId = UUID.randomUUID();
+        refund = new Refund();
+        refund.setRefundId(refundId);
+        refund.setPayment(payment);  // Payment nesnesini set ediyoruz
+        refund.setRefundAmount(BigDecimal.valueOf(50.00));
+        refund.setRefundDate(LocalDateTime.now());
         refund.setStatus("COMPLETED");
-        when(refundRepository.findById(1L)).thenReturn(Optional.of(refund));
 
-        Optional<RefundDTO> result = refundService.findById(1L);
-
-        assertTrue(result.isPresent(), "findById should return a refund when the ID is valid");
-        assertEquals("COMPLETED", result.get().getStatus(), "Status should match");
+        // Refund nesnesi save edilmesi bekleniyor
+        when(refundRepository.save(refund)).thenReturn(refund);
     }
 
+    @Test
+    public void testGetRefundsByPaymentId() {
+        // Mock: Ödeme ID'sine ait iadeleri döndüren metodu mockla
+        when(refundRepository.findByPayment_PaymentId(paymentId)).thenReturn(List.of(refund));
+
+        // Servis metodu çağrılır
+        List<Refund> refunds = refundService.getRefundsByPaymentId(paymentId);
+
+        // Assert: Sonuçların doğru olup olmadığını kontrol et
+        assertNotNull(refunds);
+        assertEquals(1, refunds.size());
+        assertEquals(paymentId, refunds.get(0).getPayment().getPaymentId());  // paymentId'yi kontrol ediyoruz
+    }
+
+    @Test
+    public void testGetRefundsByStatus() {
+        // Mock: İade durumuna göre iadeleri döndüren metodu mockla
+        when(refundRepository.findByStatus("COMPLETED")).thenReturn(List.of(refund));
+
+        // Servis metodu çağrılır
+        List<Refund> refunds = refundService.getRefundsByStatus("COMPLETED");
+
+        // Assert: Sonuçların doğru olup olmadığını kontrol et
+        assertNotNull(refunds);
+        assertEquals(1, refunds.size());
+        assertEquals("COMPLETED", refunds.get(0).getStatus());
+    }
+
+    @Test
+    public void testGetRefundsByDateRange() {
+        // Mock: Tarih aralığındaki iadeleri döndüren metodu mockla
+        LocalDateTime startDate = LocalDateTime.now().minusDays(1);
+        LocalDateTime endDate = LocalDateTime.now().plusDays(1);
+        when(refundRepository.findByRefundDateBetween(startDate, endDate)).thenReturn(List.of(refund));
+
+        // Servis metodu çağrılır
+        List<Refund> refunds = refundService.getRefundsByDateRange(startDate, endDate);
+
+        // Assert: Sonuçların doğru olup olmadığını kontrol et
+        assertNotNull(refunds);
+        assertEquals(1, refunds.size());
+        assertTrue(refunds.get(0).getRefundDate().isAfter(startDate) && refunds.get(0).getRefundDate().isBefore(endDate));
+    }
+
+    @Test
+    public void testCalculateTotalRefundAmount() {
+        // Mock: Tüm iadelerin toplam tutarını hesaplayan metodu mockla
+        when(refundRepository.calculateTotalRefundAmount()).thenReturn(BigDecimal.valueOf(500.00));
+
+        // Servis metodu çağrılır
+        BigDecimal totalAmount = refundService.calculateTotalRefundAmount();
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertNotNull(totalAmount);
+        assertEquals(BigDecimal.valueOf(500.00), totalAmount);
+    }
+
+    @Test
+    public void testCalculateTotalRefundAmountByStatus() {
+        // Mock: Duruma göre iadelerin toplam tutarını hesaplayan metodu mockla
+        when(refundRepository.calculateTotalRefundAmountByStatus("COMPLETED")).thenReturn(BigDecimal.valueOf(200.00));
+
+        // Servis metodu çağrılır
+        BigDecimal totalAmount = refundService.calculateTotalRefundAmountByStatus("COMPLETED");
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertNotNull(totalAmount);
+        assertEquals(BigDecimal.valueOf(200.00), totalAmount);
+    }
+
+    @Test
+    public void testAddRefund() {
+        // Mock: Yeni bir iade kaydını ekler
+        when(refundRepository.save(refund)).thenReturn(refund);
+
+        // Servis metodu çağrılır
+        Refund savedRefund = refundService.addRefund(refund);
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertNotNull(savedRefund);
+        assertEquals(refund.getRefundId(), savedRefund.getRefundId());
+    }
+
+    @Test
+    public void testUpdateRefund() {
+        // Mock: İade kaydının güncellenmesi
+        when(refundRepository.existsById(refund.getRefundId())).thenReturn(true);
+        when(refundRepository.save(refund)).thenReturn(refund);
+
+        // Servis metodu çağrılır
+        Refund updatedRefund = refundService.updateRefund(refund);
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertNotNull(updatedRefund);
+        assertEquals(refund.getRefundId(), updatedRefund.getRefundId());
+    }
+
+    @Test
+    public void testUpdateRefundNotFound() {
+        // Mock: İade kaydının bulunmaması durumunu belirt
+        when(refundRepository.existsById(refund.getRefundId())).thenReturn(false);
+
+        // Servis metodu çağrılır ve exception fırlatılır
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            refundService.updateRefund(refund);
+        });
+
+        // Assert: Hata mesajının doğru olup olmadığını kontrol et
+        assertEquals("İade bulunamadı.", exception.getMessage());
+    }
+
+    @Test
+    public void testDeleteRefund() {
+        // Mock: İade kaydının mevcut olduğunu belirt
+        when(refundRepository.existsById(refund.getRefundId())).thenReturn(true);
+
+        // Servis metodu çağrılır
+        refundService.deleteRefund(refund.getRefundId());
+
+        // Veritabanı erişimi kontrolü yapılır
+        verify(refundRepository, times(1)).deleteById(refund.getRefundId());
+    }
+
+    @Test
+    public void testDeleteRefundNotFound() {
+        // Mock: İade kaydının mevcut olmadığını belirt
+        when(refundRepository.existsById(refund.getRefundId())).thenReturn(false);
+
+        // Servis metodu çağrılır ve exception fırlatılır
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            refundService.deleteRefund(refund.getRefundId());
+        });
+
+        // Assert: Hata mesajının doğru olup olmadığını kontrol et
+        assertEquals("İade bulunamadı.", exception.getMessage());
+    }
 }

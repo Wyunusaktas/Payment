@@ -1,25 +1,30 @@
 package tr.edu.ogu.ceng.payment.entity;
 
-import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.hibernate.annotations.Where;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "transaction_history")
 @NoArgsConstructor
 @Data
-@Where(clause = "deleted_at IS NULL")
-public class TransactionHistory extends BaseEntity {
+public class TransactionHistory {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "history_id")
-    private Long historyId;  // UUID yerine Long
+    private UUID historyId;
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;
@@ -37,7 +42,6 @@ public class TransactionHistory extends BaseEntity {
     @Column(name = "transaction_date", nullable = false)
     private LocalDateTime transactionDate;
 
-    @Column(length = 50, nullable = false)
+    @Column(nullable = false, length = 50)
     private String status;
 }
-

@@ -1,115 +1,80 @@
 package tr.edu.ogu.ceng.payment.service;
 
-import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import tr.edu.ogu.ceng.payment.dto.PaymentDTO;
-import tr.edu.ogu.ceng.payment.entity.Payment;
-import tr.edu.ogu.ceng.payment.repository.PaymentRepository;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import tr.edu.ogu.ceng.payment.entity.Payment;
+import tr.edu.ogu.ceng.payment.repository.PaymentRepository;
 
 @Service
-@RequiredArgsConstructor
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
-    private final ModelMapper modelMapper;
 
-    // Mevcut metodlar korundu
-    // ...
-
-    // Yeni metodlar eklendi
-    public List<PaymentDTO> findPaymentsByUser(UUID userId) {
-        return paymentRepository.findByUserIdOrderByTransactionDateDesc(userId)
-                .stream()
-                .map(payment -> modelMapper.map(payment, PaymentDTO.class))
-                .collect(Collectors.toList());
+    @Autowired
+    public PaymentService(PaymentRepository paymentRepository) {
+        this.paymentRepository = paymentRepository;
     }
 
-    public List<PaymentDTO> findPaymentsByStatus(String status) {
-        return paymentRepository.findByStatus(status)
-                .stream()
-                .map(payment -> modelMapper.map(payment, PaymentDTO.class))
-                .collect(Collectors.toList());
+    // Kullanıcıya ait tüm ödemeleri getirir
+    public List<Payment> getAllPaymentsByUserId(UUID userId) {
+        return paymentRepository.findByUserId(userId);
     }
 
-    public List<PaymentDTO> findPaymentsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
-        return paymentRepository.findByTransactionDateBetween(startDate, endDate)
-                .stream()
-                .map(payment -> modelMapper.map(payment, PaymentDTO.class))
-                .collect(Collectors.toList());
+    // Ödeme durumuna göre ödemeleri getirir
+    public List<Payment> getPaymentsByStatus(String status) {
+        return paymentRepository.findByStatus(status);
     }
 
-    public List<PaymentDTO> findPaymentsAboveAmount(BigDecimal amount) {
-        return paymentRepository.findByAmountGreaterThan(amount)
-                .stream()
-                .map(payment -> modelMapper.map(payment, PaymentDTO.class))
-                .collect(Collectors.toList());
+    // PaymentMethod ile filtreleme (methodId)
+    public List<Payment> getPaymentsByPaymentMethod(UUID methodId) {
+        return paymentRepository.findByPaymentMethod_MethodId(methodId);
     }
 
-    public List<PaymentDTO> findPaymentsByMethod(Long paymentMethodId) {
-        return paymentRepository.findByPaymentMethodMethodId(paymentMethodId)
-                .stream()
-                .map(payment -> modelMapper.map(payment, PaymentDTO.class))
-                .collect(Collectors.toList());
+    // Belirli bir tarih aralığındaki ödemeleri getirir
+    public List<Payment> getPaymentsByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
+        return paymentRepository.findByTransactionDateBetween(startDate, endDate);
     }
 
-    public List<PaymentDTO> findRecurringPayments() {
-        return paymentRepository.findByRecurringTrue()
-                .stream()
-                .map(payment -> modelMapper.map(payment, PaymentDTO.class))
-                .collect(Collectors.toList());
+    // Kullanıcıya ait belirli bir tarih aralığındaki ödemeleri getirir
+    public List<Payment> getPaymentsByUserIdAndDateRange(UUID userId, LocalDateTime startDate, LocalDateTime endDate) {
+        return paymentRepository.findByUserIdAndDateRange(userId, startDate, endDate);
     }
 
-    public List<PaymentDTO> findDiscountedPayments() {
-        return paymentRepository.findByDiscountAppliedGreaterThan(BigDecimal.ZERO)
-                .stream()
-                .map(payment -> modelMapper.map(payment, PaymentDTO.class))
-                .collect(Collectors.toList());
+    // Tüm ödemelerin toplam tutarını hesaplar
+    public BigDecimal calculateTotalAmount() {
+        return paymentRepository.calculateTotalAmount();
     }
 
-    public List<PaymentDTO> findPaymentsByStatusAmountAndDate(
-            String status, BigDecimal minAmount, LocalDateTime startDate) {
-        return paymentRepository.findPaymentsByStatusAmountAndDate(status, minAmount, startDate)
-                .stream()
-                .map(payment -> modelMapper.map(payment, PaymentDTO.class))
-                .collect(Collectors.toList());
+    // Belirli bir durumdaki ödemelerin toplam tutarını hesaplar
+    public BigDecimal calculateTotalAmountByStatus(String status) {
+        return paymentRepository.calculateTotalAmountByStatus(status);
     }
 
-    public List<PaymentDTO> findCompletedPaymentsByProvider(String provider) {
-        return paymentRepository.findCompletedPaymentsByProvider(provider)
-                .stream()
-                .map(payment -> modelMapper.map(payment, PaymentDTO.class))
-                .collect(Collectors.toList());
+    // Yeni ödeme kaydı ekler
+    public Payment addPayment(Payment payment) {
+        return paymentRepository.save(payment);
     }
 
-    public BigDecimal calculateTotalPaymentAmountByUser(UUID userId) {
-        return paymentRepository.calculateTotalPaymentAmountByUser(userId);
+    // Ödeme kaydını günceller
+    public Payment updatePayment(Payment payment) {
+        if (paymentRepository.existsById(payment.getPaymentId())) {
+            return paymentRepository.save(payment);
+        }
+        throw new IllegalArgumentException("Ödeme bulunamadı.");
     }
 
-    public Optional<PaymentDTO> findLastPaymentByUser(UUID userId) {
-        return paymentRepository.findFirstByUserIdOrderByTransactionDateDesc(userId)
-                .map(payment -> modelMapper.map(payment, PaymentDTO.class));
-    }
-
-    public List<PaymentDTO> findSuccessfulPaymentsInPeriod(LocalDateTime startDate, LocalDateTime endDate) {
-        return paymentRepository.findSuccessfulPaymentsBetweenDates(startDate, endDate)
-                .stream()
-                .map(payment -> modelMapper.map(payment, PaymentDTO.class))
-                .collect(Collectors.toList());
-    }
-
-    public List<PaymentDTO> findHighValuePayments() {
-        return paymentRepository.findHighValuePayments()
-                .stream()
-                .map(payment -> modelMapper.map(payment, PaymentDTO.class))
-                .collect(Collectors.toList());
+    // Ödeme kaydını siler
+    public void deletePayment(UUID paymentId) {
+        if (paymentRepository.existsById(paymentId)) {
+            paymentRepository.deleteById(paymentId);
+        } else {
+            throw new IllegalArgumentException("Ödeme bulunamadı.");
+        }
     }
 }

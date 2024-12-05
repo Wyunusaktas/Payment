@@ -1,170 +1,201 @@
 package tr.edu.ogu.ceng.payment.service;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import tr.edu.ogu.ceng.payment.dto.SettingDTO;
-import tr.edu.ogu.ceng.payment.entity.Setting;
-import tr.edu.ogu.ceng.payment.repository.SettingRepository;
-
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.MockitoAnnotations;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
-@ExtendWith(SpringExtension.class)
+import tr.edu.ogu.ceng.payment.entity.Setting;
+import tr.edu.ogu.ceng.payment.repository.SettingRepository;
+
 public class SettingServiceTest {
 
-    @MockBean
+    @Mock
     private SettingRepository settingRepository;
 
-    @Autowired
+    @InjectMocks
     private SettingService settingService;
 
-    @Autowired
-    private ModelMapper modelMapper;
-
-    private SettingDTO settingDTO;
+    private Setting setting;
 
     @BeforeEach
-    void setUp() {
-        reset(settingRepository);
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);  // Mockito mocks'larını başlat
 
-        settingDTO = new SettingDTO();
-        settingDTO.setId(1L);
-        settingDTO.setSettingKey("siteName");
-        settingDTO.setSettingValue("My Application");
-    }
-
-
-
-    @Test
-    void testCreateSetting() {
-        Setting setting = modelMapper.map(settingDTO, Setting.class);
-        when(settingRepository.save(any(Setting.class))).thenReturn(setting);
-
-        SettingDTO createdSettingDTO = settingService.save(settingDTO);
-
-        assertNotNull(createdSettingDTO, "Setting creation failed, returned object is null.");
-        assertEquals(settingDTO.getSettingKey(), createdSettingDTO.getSettingKey());
-        verify(settingRepository, times(1)).save(any(Setting.class));
-    }
-
-    @Test
-    void testFindSettingById_NotFound() {
-        when(settingRepository.findById(anyLong())).thenReturn(Optional.empty());
-
-        Optional<SettingDTO> foundSettingDTO = settingService.findById(999L);
-
-        assertFalse(foundSettingDTO.isPresent(), "Setting should not be found.");
-        verify(settingRepository, times(1)).findById(999L);
-    }
-
-    @Test
-    void testFindSettingById() {
-        Setting setting = modelMapper.map(settingDTO, Setting.class);
-        when(settingRepository.findById(settingDTO.getId())).thenReturn(Optional.of(setting));
-
-        Optional<SettingDTO> foundSettingDTO = settingService.findById(settingDTO.getId());
-
-        assertTrue(foundSettingDTO.isPresent(), "Setting not found.");
-        assertEquals(settingDTO.getSettingKey(), foundSettingDTO.get().getSettingKey());
-        verify(settingRepository, times(1)).findById(settingDTO.getId());
-    }
-
-    @Test
-    void testUpdateSetting() {
-        settingDTO.setSettingValue("Updated Application Name");
-        Setting updatedSetting = modelMapper.map(settingDTO, Setting.class);
-
-        when(settingRepository.save(any(Setting.class))).thenReturn(updatedSetting);
-
-        SettingDTO updatedSettingDTO = settingService.save(settingDTO);
-
-        assertNotNull(updatedSettingDTO, "Setting update failed, returned object is null.");
-        assertEquals("Updated Application Name", updatedSettingDTO.getSettingValue(), "Setting value did not update correctly.");
-        verify(settingRepository, times(1)).save(any(Setting.class));
-    }
-
-    @Test
-    void testFindSettingBySettingKey() {
-        Setting setting = modelMapper.map(settingDTO, Setting.class);
-        when(settingRepository.findBySettingKey(settingDTO.getSettingKey())).thenReturn(setting);
-
-        SettingDTO foundSettingDTO = settingService.findBySettingKey(settingDTO.getSettingKey());
-
-        assertNotNull(foundSettingDTO, "Setting not found by key.");
-        assertEquals(settingDTO.getSettingKey(), foundSettingDTO.getSettingKey());
-        verify(settingRepository, times(1)).findBySettingKey(settingDTO.getSettingKey());
-    }
-
-    @Test
-    void testSoftDeleteSetting() {
-        Setting setting = modelMapper.map(settingDTO, Setting.class);
-        ArgumentCaptor<Setting> captor = ArgumentCaptor.forClass(Setting.class);
-
-        when(settingRepository.findById(settingDTO.getId())).thenReturn(Optional.of(setting));
-        when(settingRepository.save(any(Setting.class))).thenReturn(setting);
-
-        settingService.softDelete(settingDTO.getId(), "testUser");
-
-        verify(settingRepository, times(1)).findById(settingDTO.getId());
-        verify(settingRepository, times(1)).save(captor.capture());
-
-        Setting softDeletedSetting = captor.getValue();
-        assertNotNull(softDeletedSetting.getDeletedAt(), "DeletedAt should not be null after soft delete.");
-        assertEquals("testUser", softDeletedSetting.getDeletedBy(), "DeletedBy should match the given user.");
-    }
-
-    @Test
-    void testSoftDeleteSetting_NotFound() {
-        when(settingRepository.findById(anyLong())).thenReturn(Optional.empty());
-
-        settingService.softDelete(999L, "testUser");
-
-        verify(settingRepository, times(1)).findById(999L);
-        verify(settingRepository, never()).save(any(Setting.class));
-    }
-
-    @Test
-    void testFindAllSettings() {
-        Setting setting = modelMapper.map(settingDTO, Setting.class);
-        when(settingRepository.findAll()).thenReturn(List.of(setting));
-
-        List<SettingDTO> settingDTOList = settingService.findAll();
-
-        assertNotNull(settingDTOList, "Setting list is null.");
-        assertFalse(settingDTOList.isEmpty(), "Setting list is empty.");
-        assertEquals(1, settingDTOList.size(), "Setting list size mismatch.");
-        verify(settingRepository, times(1)).findAll();
-    }
-
-    @Test
-    void testFindBySettingKeyReturnsSetting() {
-        Setting setting = new Setting();
+        // Test için örnek Setting nesnesi oluşturuyoruz
+        setting = new Setting();
+        setting.setId(1L);
         setting.setSettingKey("currency");
-        when(settingRepository.findBySettingKey("currency")).thenReturn(setting);
-
-        SettingDTO result = settingService.findBySettingKey("currency");
-
-        assertNotNull(result, "Setting should not be null when found by key");
-        assertEquals("currency", result.getSettingKey(), "Setting key should match");
+        setting.setSettingValue("USD");
+        setting.setDeletedAt(null);
     }
 
+    @Test
+    public void testGetSettingByKey() {
+        // Mock: SettingRepository.findBySettingKey metodunu mockla
+        when(settingRepository.findBySettingKey("currency")).thenReturn(Optional.of(setting));
 
+        // Servis metodu çağrılır
+        Optional<Setting> result = settingService.getSettingByKey("currency");
+
+        // Assert: Sonuçların doğru olup olmadığını kontrol et
+        assertTrue(result.isPresent());
+        assertEquals("currency", result.get().getSettingKey());
+    }
+
+    @Test
+    public void testGetSettingByKeyNotFound() {
+        // Mock: SettingRepository.findBySettingKey metodunu mockla
+        when(settingRepository.findBySettingKey("nonexistent")).thenReturn(Optional.empty());
+
+        // Servis metodu çağrılır
+        Optional<Setting> result = settingService.getSettingByKey("nonexistent");
+
+        // Assert: Sonucun boş olması gerektiğini kontrol et
+        assertFalse(result.isPresent());
+    }
+
+    @Test
+    public void testExistsSettingByKey() {
+        // Mock: SettingRepository.existsBySettingKey metodunu mockla
+        when(settingRepository.existsBySettingKey("currency")).thenReturn(true);
+
+        // Servis metodu çağrılır
+        boolean exists = settingService.existsSettingByKey("currency");
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertTrue(exists);
+    }
+
+    @Test
+    public void testExistsSettingByKeyNotFound() {
+        // Mock: SettingRepository.existsBySettingKey metodunu mockla
+        when(settingRepository.existsBySettingKey("nonexistent")).thenReturn(false);
+
+        // Servis metodu çağrılır
+        boolean exists = settingService.existsSettingByKey("nonexistent");
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertFalse(exists);
+    }
+
+    @Test
+    public void testGetSettingByValue() {
+        // Mock: SettingRepository.findBySettingValue metodunu mockla
+        when(settingRepository.findBySettingValue("USD")).thenReturn(Optional.of(setting));
+
+        // Servis metodu çağrılır
+        Optional<Setting> result = settingService.getSettingByValue("USD");
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertTrue(result.isPresent());
+        assertEquals("USD", result.get().getSettingValue());
+    }
+
+    @Test
+    public void testGetAllActiveSettings() {
+        // Mock: SettingRepository.findAllActiveSettings metodunu mockla
+        when(settingRepository.findAllActiveSettings()).thenReturn(List.of(setting));
+
+        // Servis metodu çağrılır
+        List<Setting> result = settingService.getAllActiveSettings();
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("currency", result.get(0).getSettingKey());
+    }
+
+    @Test
+    public void testCountActiveSettings() {
+        // Mock: SettingRepository.countActiveSettings metodunu mockla
+        when(settingRepository.countActiveSettings()).thenReturn(1L);
+
+        // Servis metodu çağrılır
+        long count = settingService.countActiveSettings();
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertEquals(1L, count);
+    }
+
+    @Test
+    public void testAddSetting() {
+        // Mock: Yeni bir Setting eklemek için save metodunu mockla
+        when(settingRepository.save(setting)).thenReturn(setting);
+
+        // Servis metodu çağrılır
+        Setting result = settingService.addSetting(setting);
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertNotNull(result);
+        assertEquals(setting.getSettingKey(), result.getSettingKey());
+    }
+
+    @Test
+    public void testUpdateSetting() {
+        // Mock: SettingRepository.existsById metodunu mockla
+        when(settingRepository.existsById(setting.getId())).thenReturn(true);
+        when(settingRepository.save(setting)).thenReturn(setting);
+
+        // Servis metodu çağrılır
+        Setting result = settingService.updateSetting(setting);
+
+        // Assert: Sonucun doğru olup olmadığını kontrol et
+        assertNotNull(result);
+        assertEquals(setting.getId(), result.getId());
+    }
+
+    @Test
+    public void testUpdateSettingNotFound() {
+        // Mock: SettingRepository.existsById metodunu mockla
+        when(settingRepository.existsById(setting.getId())).thenReturn(false);
+
+        // Servis metodu çağrılır ve exception fırlatılır
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            settingService.updateSetting(setting);
+        });
+
+        // Assert: Hata mesajının doğru olup olmadığını kontrol et
+        assertEquals("Ayar bulunamadı.", exception.getMessage());
+    }
+
+    @Test
+    public void testDeleteSetting() {
+        // Mock: SettingRepository.findById metodunu mockla
+        when(settingRepository.findById(setting.getId())).thenReturn(Optional.of(setting));
+        when(settingRepository.save(setting)).thenReturn(setting);
+
+        // Servis metodu çağrılır
+        settingService.deleteSetting(setting.getId());
+
+        // Verify: delete işlemi yapıldı mı kontrol et
+        assertNotNull(setting.getDeletedAt());
+        verify(settingRepository, times(1)).save(setting);
+    }
+
+    @Test
+    public void testDeleteSettingNotFound() {
+        // Mock: SettingRepository.findById metodunu mockla
+        when(settingRepository.findById(setting.getId())).thenReturn(Optional.empty());
+
+        // Servis metodu çağrılır ve exception fırlatılır
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+            settingService.deleteSetting(setting.getId());
+        });
+
+        // Assert: Hata mesajının doğru olup olmadığını kontrol et
+        assertEquals("Ayar bulunamadı.", exception.getMessage());
+    }
 }

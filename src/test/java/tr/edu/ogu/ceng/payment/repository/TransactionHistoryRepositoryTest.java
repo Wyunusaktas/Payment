@@ -1,13 +1,11 @@
 package tr.edu.ogu.ceng.payment.repository;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,13 +13,16 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
-import tr.edu.ogu.ceng.payment.entity.TransactionHistory;
 import tr.edu.ogu.ceng.payment.entity.Payment;
+import tr.edu.ogu.ceng.payment.entity.TransactionHistory;
 
 @SpringBootTest
+@Testcontainers
 public class TransactionHistoryRepositoryTest {
 
+    // PostgreSQL container for testing
     public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:16-alpine");
 
     @Autowired
@@ -30,147 +31,188 @@ public class TransactionHistoryRepositoryTest {
     @Autowired
     private PaymentRepository paymentRepository;
 
-    private TransactionHistory history1;
-    private TransactionHistory history2;
-    private Payment payment;
-    private UUID userId;
-
+    // Start the container and set properties dynamically
     static {
         postgreSQLContainer.start();
     }
 
-    @BeforeEach
-    void setUp() {
-        userId = UUID.randomUUID();
-
-        // Payment oluştur
-        payment = new Payment();
-        payment.setUserId(userId);
-        payment.setAmount(new BigDecimal("100.00"));
-        payment.setStatus("COMPLETED");
-        paymentRepository.save(payment);
-
-        // İlk işlem geçmişi
-        history1 = new TransactionHistory();
-        history1.setUserId(userId);
-        history1.setPayment(payment);
-        history1.setTransactionType("PAYMENT");
-        history1.setAmount(new BigDecimal("100.00"));
-        history1.setTransactionDate(LocalDateTime.now().minusHours(2));
-        history1.setStatus("COMPLETED");
-        transactionHistoryRepository.save(history1);
-
-        // İkinci işlem geçmişi
-        history2 = new TransactionHistory();
-        history2.setUserId(userId);
-        history2.setPayment(payment);
-        history2.setTransactionType("REFUND");
-        history2.setAmount(new BigDecimal("50.00"));
-        history2.setTransactionDate(LocalDateTime.now());
-        history2.setStatus("PENDING");
-        transactionHistoryRepository.save(history2);
-    }
-
-    @Test
-    public void testFindById() {
-        Optional<TransactionHistory> found = transactionHistoryRepository.findById(history1.getHistoryId());
-
-        assertThat(found).isPresent();
-        assertThat(found.get().getTransactionType()).isEqualTo(history1.getTransactionType());
-    }
-
-    @Test
-    public void testFindByUserId() {
-        List<TransactionHistory> histories = transactionHistoryRepository.findByUserId(userId);
-
-        assertThat(histories).hasSize(2);
-        assertThat(histories).allMatch(h -> h.getUserId().equals(userId));
-    }
-
-    @Test
-    public void testFindByPaymentPaymentId() {
-        List<TransactionHistory> histories = transactionHistoryRepository.findByPaymentPaymentId(payment.getPaymentId());
-
-        assertThat(histories).hasSize(2);
-    }
-
-    @Test
-    public void testFindByTransactionType() {
-        List<TransactionHistory> payments = transactionHistoryRepository.findByTransactionType("PAYMENT");
-
-        assertThat(payments).hasSize(1);
-        assertThat(payments.get(0).getTransactionType()).isEqualTo("PAYMENT");
-    }
-
-    @Test
-    public void testFindByStatus() {
-        List<TransactionHistory> completedTransactions = transactionHistoryRepository.findByStatus("COMPLETED");
-
-        assertThat(completedTransactions).hasSize(1);
-    }
-
-    @Test
-    public void testFindByTransactionDateBetween() {
-        LocalDateTime startTime = LocalDateTime.now().minusHours(3);
-        LocalDateTime endTime = LocalDateTime.now().plusHours(1);
-
-        List<TransactionHistory> histories = transactionHistoryRepository.findByTransactionDateBetween(startTime, endTime);
-
-        assertThat(histories).hasSize(2);
-    }
-
-    @Test
-    public void testFindByAmountGreaterThan() {
-        List<TransactionHistory> largeTransactions = transactionHistoryRepository.findByAmountGreaterThan(
-                new BigDecimal("75.00")
-        );
-
-        assertThat(largeTransactions).hasSize(1);
-        assertThat(largeTransactions.get(0).getAmount()).isGreaterThan(new BigDecimal("75.00"));
-    }
-
-    @Test
-    public void testFindFirstByUserIdOrderByTransactionDateDesc() {
-        Optional<TransactionHistory> latestTransaction = transactionHistoryRepository
-                .findFirstByUserIdOrderByTransactionDateDesc(userId);
-
-        assertThat(latestTransaction).isPresent();
-        assertThat(latestTransaction.get().getTransactionType()).isEqualTo(history2.getTransactionType());
-    }
-
-    @Test
-    public void testFindByTransactionTypeAndStatus() {
-        List<TransactionHistory> completedPayments = transactionHistoryRepository
-                .findByTransactionTypeAndStatus("PAYMENT", "COMPLETED");
-
-        assertThat(completedPayments).hasSize(1);
-    }
-
-    @Test
-    public void testSoftDelete() {
-        TransactionHistory history = transactionHistoryRepository.findById(history1.getHistoryId()).orElseThrow();
-        history.setDeletedAt(LocalDateTime.now());
-        history.setDeletedBy("testUser");
-        transactionHistoryRepository.save(history);
-
-        Optional<TransactionHistory> deletedHistory = transactionHistoryRepository.findById(history1.getHistoryId());
-        assertThat(deletedHistory).isEmpty();
-    }
-
-    @Test
-    public void testUpdateTransactionStatus() {
-        TransactionHistory history = transactionHistoryRepository.findById(history2.getHistoryId()).orElseThrow();
-        history.setStatus("COMPLETED");
-        transactionHistoryRepository.save(history);
-
-        TransactionHistory updatedHistory = transactionHistoryRepository.findById(history2.getHistoryId()).orElseThrow();
-        assertThat(updatedHistory.getStatus()).isEqualTo("COMPLETED");
-    }
-
     @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
+    static void setProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", postgreSQLContainer::getJdbcUrl);
         registry.add("spring.datasource.username", postgreSQLContainer::getUsername);
         registry.add("spring.datasource.password", postgreSQLContainer::getPassword);
+    }
+
+    @BeforeEach
+    public void setUp() {
+        // Clear the repositories before each test
+        transactionHistoryRepository.deleteAll();
+        paymentRepository.deleteAll();
+    }
+
+    // Test: findByUserId
+    @Test
+    public void testFindByUserId() {
+        UUID userId = UUID.randomUUID();
+        Payment payment = new Payment();
+        payment.setUserId(userId);
+        payment.setAmount(BigDecimal.valueOf(100.00));
+        payment.setStatus("COMPLETED");
+        payment.setTransactionDate(LocalDateTime.now());
+        payment.setDescription("Test Payment");
+        payment.setRecurring(false);
+        payment.setPaymentChannel("Online");
+
+        paymentRepository.save(payment);
+
+        TransactionHistory transactionHistory = new TransactionHistory();
+        transactionHistory.setUserId(userId);
+        transactionHistory.setPayment(payment);
+        transactionHistory.setTransactionType("WITHDRAWAL");
+        transactionHistory.setAmount(BigDecimal.valueOf(50.00));
+        transactionHistory.setTransactionDate(LocalDateTime.now());
+        transactionHistory.setStatus("COMPLETED");
+
+        transactionHistoryRepository.save(transactionHistory);
+
+        List<TransactionHistory> transactions = transactionHistoryRepository.findByUserId(userId);
+        assertThat(transactions).hasSize(1); // Ensure we have 1 transaction for this user
+    }
+
+    // Test: findByPayment_PaymentId
+    @Test
+    public void testFindByPayment_PaymentId() {
+        UUID userId = UUID.randomUUID(); 
+        Payment payment = new Payment();
+        payment.setUserId(UUID.randomUUID());
+        payment.setAmount(BigDecimal.valueOf(100.00));
+        payment.setStatus("COMPLETED");
+        payment.setTransactionDate(LocalDateTime.now());
+        payment.setDescription("Test Payment");
+        payment.setRecurring(false);
+        payment.setPaymentChannel("Online");
+    
+        Payment savedPayment = paymentRepository.save(payment);
+     
+        TransactionHistory transactionHistory = new TransactionHistory();
+        transactionHistory.setUserId(userId); 
+        transactionHistory.setPayment(savedPayment);  // Use savedPayment with generated paymentId
+        transactionHistory.setTransactionType("WITHDRAWAL");
+        transactionHistory.setAmount(BigDecimal.valueOf(50.00));
+        transactionHistory.setTransactionDate(LocalDateTime.now());
+        transactionHistory.setStatus("COMPLETED");
+     
+        // Save transaction history after payment is saved
+        transactionHistoryRepository.save(transactionHistory);
+     
+        // Fetch transactions by paymentId
+        List<TransactionHistory> transactions = transactionHistoryRepository.findByPayment_PaymentId(savedPayment.getPaymentId());
+        assertThat(transactions).hasSize(1); // Ensure we have 1 transaction for this payment
+    }
+
+    // Test: findByTransactionType
+    @Test
+    public void testFindByTransactionType() {
+        UUID userId = UUID.randomUUID();
+        Payment payment = new Payment();
+        payment.setUserId(UUID.randomUUID());
+        payment.setAmount(BigDecimal.valueOf(100.00));
+        payment.setStatus("COMPLETED");
+        payment.setTransactionDate(LocalDateTime.now());
+        payment.setDescription("Test Payment");
+        payment.setRecurring(false);
+        payment.setPaymentChannel("Online");
+        Payment savedPayment = paymentRepository.save(payment);
+
+        TransactionHistory transactionHistory = new TransactionHistory();
+        transactionHistory.setUserId(userId);
+        transactionHistory.setPayment(payment);
+        transactionHistory.setTransactionType("WITHDRAWAL");
+        transactionHistory.setAmount(BigDecimal.valueOf(50.00));
+        transactionHistory.setTransactionDate(LocalDateTime.now());
+        transactionHistory.setStatus("COMPLETED");
+
+        transactionHistoryRepository.save(transactionHistory);
+
+        List<TransactionHistory> transactions = transactionHistoryRepository.findByTransactionType("WITHDRAWAL");
+        assertThat(transactions).hasSize(1); // Ensure we have 1 transaction of type "WITHDRAWAL"
+    }
+
+    // Test: findByTransactionDateBetween
+    @Test
+    public void testFindByTransactionDateBetween() {
+        // Define the date range to be a few minutes before and after
+        LocalDateTime startDate = LocalDateTime.now().minusMinutes(5);  // 5 minutes before now
+        LocalDateTime endDate = LocalDateTime.now().plusMinutes(5);     // 5 minutes after now
+         
+        UUID userId = UUID.randomUUID();
+        Payment payment = new Payment();
+        payment.setUserId(UUID.randomUUID());
+        payment.setAmount(BigDecimal.valueOf(100.00));
+        payment.setStatus("COMPLETED");
+        payment.setTransactionDate(LocalDateTime.now());  // This is within the date range
+        payment.setDescription("Test Payment");
+        payment.setRecurring(false);
+        payment.setPaymentChannel("Online");
+         
+        Payment savedPayment = paymentRepository.save(payment);
+         
+        TransactionHistory transactionHistory = new TransactionHistory();
+        transactionHistory.setUserId(userId);
+        transactionHistory.setPayment(savedPayment);  // Use savedPayment with valid paymentId
+        transactionHistory.setTransactionType("WITHDRAWAL");
+        transactionHistory.setAmount(BigDecimal.valueOf(50.00));
+        transactionHistory.setTransactionDate(LocalDateTime.now()); // This is also within the range
+        transactionHistory.setStatus("COMPLETED");
+         
+        // Save transaction history
+        transactionHistoryRepository.save(transactionHistory);
+         
+        // Fetch transactions within the date range
+        List<TransactionHistory> transactions = transactionHistoryRepository.findByTransactionDateBetween(startDate, endDate);
+        
+        // Assert that there is exactly one transaction within the date range
+        assertThat(transactions).hasSize(1);
+        assertThat(transactions.get(0).getTransactionType()).isEqualTo("WITHDRAWAL");
+        assertThat(transactions.get(0).getAmount()).isEqualByComparingTo(BigDecimal.valueOf(50.00));
+        assertThat(transactions.get(0).getStatus()).isEqualTo("COMPLETED");
+    }
+
+    // Test: calculateTotalAmountByUserId
+    @Test
+    public void testCalculateTotalAmountByUserId() {
+        UUID userId = UUID.randomUUID();
+        Payment payment = new Payment();
+        payment.setUserId(userId);
+        payment.setAmount(BigDecimal.valueOf(100.00));
+        payment.setStatus("COMPLETED");
+        payment.setTransactionDate(LocalDateTime.now());
+        payment.setDescription("Test Payment");
+        payment.setRecurring(false);
+        payment.setPaymentChannel("Online");
+
+        paymentRepository.save(payment);
+
+        TransactionHistory transactionHistory1 = new TransactionHistory();
+        transactionHistory1.setUserId(userId);
+        transactionHistory1.setPayment(payment);
+        transactionHistory1.setTransactionType("WITHDRAWAL");
+        transactionHistory1.setAmount(BigDecimal.valueOf(50.00));
+        transactionHistory1.setTransactionDate(LocalDateTime.now());
+        transactionHistory1.setStatus("COMPLETED");
+
+        TransactionHistory transactionHistory2 = new TransactionHistory();
+        transactionHistory2.setUserId(userId);
+        transactionHistory2.setPayment(payment);
+        transactionHistory2.setTransactionType("WITHDRAWAL");
+        transactionHistory2.setAmount(BigDecimal.valueOf(30.00));
+        transactionHistory2.setTransactionDate(LocalDateTime.now());
+        transactionHistory2.setStatus("COMPLETED");
+
+        transactionHistoryRepository.save(transactionHistory1);
+        transactionHistoryRepository.save(transactionHistory2);
+
+        BigDecimal totalAmount = transactionHistoryRepository.calculateTotalAmountByUserId(userId);
+        assertThat(totalAmount).isEqualByComparingTo(BigDecimal.valueOf(80.00)); // Total should be 80.00
     }
 }
