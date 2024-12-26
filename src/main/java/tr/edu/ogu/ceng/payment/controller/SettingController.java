@@ -23,6 +23,7 @@ import tr.edu.ogu.ceng.payment.service.SettingService;
 @RequestMapping("/api/settings")
 public class SettingController {
     
+    
 
     private final SettingService settingService;
 

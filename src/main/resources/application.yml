@@ -44,5 +44,5 @@ springdoc:
   api-docs:
     path: /api-docs
 
-secret:
-  key: ilerijava 
+api:
+  secret-key: your-secret-key
