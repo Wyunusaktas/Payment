@@ -21,6 +21,11 @@ spring:
     locations: classpath:db/migration
     baselineOnMigrate: true
 
+  security:
+    user:
+      name: devuser
+      password: devpassword
+
 microservices:
   user: http://192.168.137.195:8007
   order: http://192.168.137.169:8003
