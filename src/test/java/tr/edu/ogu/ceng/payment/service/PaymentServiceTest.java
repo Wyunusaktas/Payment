@@ -36,7 +36,7 @@ public class PaymentServiceTest {
 
     @BeforeEach
     public void setUp() {
-        userId = UUID.randomUUID();  // New userId for the test
+        userId = UUID.randomUUID();  // Yeni bir userId oluşturuluyor
 
         payment = new Payment();
         payment.setPaymentId(UUID.randomUUID());
@@ -51,7 +51,7 @@ public class PaymentServiceTest {
 
     @Test
     public void testGetAllPaymentsByUserId() {
-        // Mock the behavior of the repository
+        // Repository davranışını taklit et
         when(paymentRepository.findByUserId(userId)).thenReturn(List.of(payment));
 
         List<Payment> payments = paymentService.getAllPaymentsByUserId(userId);
@@ -60,13 +60,13 @@ public class PaymentServiceTest {
         assertEquals(1, payments.size());
         assertEquals(payment.getUserId(), payments.get(0).getUserId());
 
-        // Verify the repository method was called
+        // Repository metodunun çağrıldığını doğrula
         verify(paymentRepository, times(1)).findByUserId(userId);
     }
 
     @Test
     public void testGetPaymentsByStatus() {
-        // Mock the repository behavior
+        // Repository davranışını taklit et
         when(paymentRepository.findByStatus("Completed")).thenReturn(List.of(payment));
 
         List<Payment> payments = paymentService.getPaymentsByStatus("Completed");
@@ -75,19 +75,19 @@ public class PaymentServiceTest {
         assertTrue(payments.size() > 0);
         assertEquals("Completed", payments.get(0).getStatus());
 
-        // Verify the repository method was called
+        // Repository metodunun çağrıldığını doğrula
         verify(paymentRepository, times(1)).findByStatus("Completed");
     }
 
     @Test
     public void testGetPaymentsByPaymentMethod() {
-        UUID methodId = UUID.randomUUID(); // Mocked methodId
+        UUID methodId = UUID.randomUUID(); // Taklit edilen methodId
         when(paymentRepository.findByPaymentMethod_MethodId(methodId)).thenReturn(List.of(payment));
 
         List<Payment> payments = paymentService.getPaymentsByPaymentMethod(methodId);
 
         assertNotNull(payments);
-        // Verify repository method was called
+        // Repository metodunun çağrıldığını doğrula
         verify(paymentRepository, times(1)).findByPaymentMethod_MethodId(methodId);
     }
 
@@ -104,7 +104,7 @@ public class PaymentServiceTest {
         assertTrue(payments.get(0).getTransactionDate().isAfter(startDate));
         assertTrue(payments.get(0).getTransactionDate().isBefore(endDate));
 
-        // Verify repository method was called
+        // Repository metodunun çağrıldığını doğrula
         verify(paymentRepository, times(1)).findByTransactionDateBetween(startDate, endDate);
     }
 
@@ -117,7 +117,7 @@ public class PaymentServiceTest {
         assertNotNull(totalAmount);
         assertEquals(0, totalAmount.compareTo(BigDecimal.valueOf(500.00)));
 
-        // Verify repository method was called
+        // Repository metodunun çağrıldığını doğrula
         verify(paymentRepository, times(1)).calculateTotalAmount();
     }
 
@@ -130,7 +130,7 @@ public class PaymentServiceTest {
         assertNotNull(totalAmount);
         assertEquals(0, totalAmount.compareTo(BigDecimal.valueOf(100.00)));
 
-        // Verify repository method was called
+        // Repository metodunun çağrıldığını doğrula
         verify(paymentRepository, times(1)).calculateTotalAmountByStatus("Completed");
     }
 
@@ -143,7 +143,7 @@ public class PaymentServiceTest {
         assertNotNull(savedPayment);
         assertEquals(payment.getAmount(), savedPayment.getAmount());
 
-        // Verify repository method was called
+        // Repository metodunun çağrıldığını doğrula
         verify(paymentRepository, times(1)).save(payment);
     }
 
@@ -159,7 +159,7 @@ public class PaymentServiceTest {
         assertNotNull(updatedPayment);
         assertEquals("Refunded", updatedPayment.getStatus());
 
-        // Verify repository method was called
+        // Repository metodunun çağrıldığını doğrula
         verify(paymentRepository, times(1)).existsById(payment.getPaymentId());
         verify(paymentRepository, times(1)).save(payment);
     }
@@ -173,7 +173,7 @@ public class PaymentServiceTest {
 
         paymentService.deletePayment(paymentId);
 
-        // Verify repository method was called
+        // Repository metodunun çağrıldığını doğrula
         verify(paymentRepository, times(1)).existsById(paymentId);
         verify(paymentRepository, times(1)).deleteById(paymentId);
     }

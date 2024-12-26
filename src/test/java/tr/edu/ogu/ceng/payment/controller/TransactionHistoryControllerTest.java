@@ -42,13 +42,13 @@ public class TransactionHistoryControllerTest {
 
     private ObjectMapper objectMapper;
 
-      @BeforeEach
+    @BeforeEach
     void setUp() {
-    MockitoAnnotations.openMocks(this);
-    mockMvc = MockMvcBuilders.standaloneSetup(transactionHistoryController).build();
-    objectMapper = new ObjectMapper();
-    objectMapper.registerModule(new JavaTimeModule());  // Register the JavaTimeModule
-}
+        MockitoAnnotations.openMocks(this);
+        mockMvc = MockMvcBuilders.standaloneSetup(transactionHistoryController).build();
+        objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());  // JavaTimeModule kayıt edilir
+    }
 
     @Test
     void testGetTransactionHistoryByUserId() throws Exception {
@@ -68,7 +68,55 @@ public class TransactionHistoryControllerTest {
                 .andExpect(jsonPath("$[0].amount").value(50.00));
     }
 
-   
+  
+
+    @Test
+    void testGetTransactionHistoryByTransactionType() throws Exception {
+        TransactionHistory history = new TransactionHistory();
+        history.setTransactionType("WITHDRAWAL");
+        history.setAmount(BigDecimal.valueOf(50.00));
+
+        when(transactionHistoryService.getTransactionHistoryByTransactionType("WITHDRAWAL")).thenReturn(Arrays.asList(history));
+
+        mockMvc.perform(get("/api/transaction-history/type/{transactionType}", "WITHDRAWAL")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].transactionType").value("WITHDRAWAL"))
+                .andExpect(jsonPath("$[0].amount").value(50.00));
+    }
+
+    @Test
+    void testGetTransactionHistoryByDateRange() throws Exception {
+        String startDate = "2024-01-01T00:00:00";
+        String endDate = "2024-12-31T23:59:59";
+
+        TransactionHistory history = new TransactionHistory();
+        history.setTransactionType("DEPOSIT");
+        history.setAmount(BigDecimal.valueOf(100.00));
+
+        when(transactionHistoryService.getTransactionHistoryByDateRange(any(), any())).thenReturn(Arrays.asList(history));
+
+        mockMvc.perform(get("/api/transaction-history/date-range")
+                .param("startDate", startDate)
+                .param("endDate", endDate)
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].transactionType").value("DEPOSIT"))
+                .andExpect(jsonPath("$[0].amount").value(100.00));
+    }
+
+    @Test
+    void testCalculateTotalAmountByUserId() throws Exception {
+        UUID userId = UUID.randomUUID();
+        BigDecimal totalAmount = BigDecimal.valueOf(500.00);
+
+        when(transactionHistoryService.calculateTotalAmountByUserId(userId)).thenReturn(totalAmount);
+
+        mockMvc.perform(get("/api/transaction-history/total/{userId}", userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(500.00));
+    }
+
     @Test
     void testAddTransactionHistory() throws Exception {
         TransactionHistory transactionHistory = new TransactionHistory();
@@ -116,4 +164,5 @@ public class TransactionHistoryControllerTest {
 
         verify(transactionHistoryService, times(1)).deleteTransactionHistory(transactionHistoryId);
     }
+
 }

@@ -1,20 +1,16 @@
 package tr.edu.ogu.ceng.payment.service;
 
-import java.awt.PageAttributes;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.boot.autoconfigure.security.SecurityProperties;
 import org.springframework.http.MediaType;
-
-import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import lombok.RequiredArgsConstructor;
 import tr.edu.ogu.ceng.payment.entity.Setting;
 import tr.edu.ogu.ceng.payment.repository.SettingRepository;
-import tr.edu.ogu.ceng.payment.User;
+import tr.edu.ogu.ceng.payment.restClientOrder.User;
 @RequiredArgsConstructor
 @Service
 public class SettingService {

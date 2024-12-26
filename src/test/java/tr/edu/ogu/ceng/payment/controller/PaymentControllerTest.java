@@ -44,7 +44,7 @@ public class PaymentControllerTest {
     private ObjectMapper objectMapper;
 
     @BeforeEach
-     void setUp() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
         mockMvc = MockMvcBuilders.standaloneSetup(paymentController).build();
         objectMapper = new ObjectMapper();
@@ -88,6 +88,63 @@ public class PaymentControllerTest {
                 .andExpect(jsonPath("$[0].status").value("COMPLETED"));
     }
 
+
+
+    @Test
+    public void testGetPaymentsByDateRange() throws Exception {
+        LocalDateTime startDate = LocalDateTime.of(2024, 1, 1, 0, 0, 0, 0);
+        LocalDateTime endDate = LocalDateTime.of(2024, 12, 31, 23, 59, 59, 999999);
+        
+        Payment payment = createTestPayment();
+        when(paymentService.getPaymentsByDateRange(startDate, endDate)).thenReturn(List.of(payment));
+
+        mockMvc.perform(get("/api/payments/date-range")
+                .param("startDate", startDate.toString())
+                .param("endDate", endDate.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].amount").value(100.00))
+                .andExpect(jsonPath("$[0].status").value("PENDING"));
+    }
+
+    @Test
+    public void testGetPaymentsByUserIdAndDateRange() throws Exception {
+        UUID userId = UUID.randomUUID();
+        LocalDateTime startDate = LocalDateTime.of(2024, 1, 1, 0, 0, 0, 0);
+        LocalDateTime endDate = LocalDateTime.of(2024, 12, 31, 23, 59, 59, 999999);
+
+        Payment payment = createTestPayment();
+        payment.setUserId(userId);
+
+        when(paymentService.getPaymentsByUserIdAndDateRange(userId, startDate, endDate)).thenReturn(List.of(payment));
+
+        mockMvc.perform(get("/api/payments/user/{userId}/date-range", userId)
+                .param("startDate", startDate.toString())
+                .param("endDate", endDate.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].amount").value(100.00))
+                .andExpect(jsonPath("$[0].status").value("PENDING"));
+    }
+
+    @Test
+    public void testCalculateTotalAmount() throws Exception {
+        BigDecimal totalAmount = BigDecimal.valueOf(500.00);
+        when(paymentService.calculateTotalAmount()).thenReturn(totalAmount);
+
+        mockMvc.perform(get("/api/payments/total-amount"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(500.00));
+    }
+
+    @Test
+    public void testCalculateTotalAmountByStatus() throws Exception {
+        BigDecimal totalAmount = BigDecimal.valueOf(500.00);
+        when(paymentService.calculateTotalAmountByStatus("COMPLETED")).thenReturn(totalAmount);
+
+        mockMvc.perform(get("/api/payments/total-amount/status/{status}", "COMPLETED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(500.00));
+    }
+
     @Test
     public void testAddPayment() throws Exception {
         Payment payment = createTestPayment();
@@ -100,25 +157,6 @@ public class PaymentControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.amount").value(100.00))
                 .andExpect(jsonPath("$.status").value("PENDING"));
-    }
-
-    @Test
-    public void testDeletePayment() throws Exception {
-        UUID paymentId = UUID.randomUUID();
-        doNothing().when(paymentService).deletePayment(paymentId);
-
-        mockMvc.perform(delete("/api/payments/{paymentId}", paymentId))
-                .andExpect(status().isNoContent());
-    }
-
-    @Test
-    public void testCalculateTotalAmount() throws Exception {
-        BigDecimal totalAmount = BigDecimal.valueOf(500.00);
-        when(paymentService.calculateTotalAmount()).thenReturn(totalAmount);
-
-        mockMvc.perform(get("/api/payments/total-amount"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").value(500.00));
     }
 
     @Test
@@ -148,6 +186,15 @@ public class PaymentControllerTest {
     }
 
     @Test
+    public void testDeletePayment() throws Exception {
+        UUID paymentId = UUID.randomUUID();
+        doNothing().when(paymentService).deletePayment(paymentId);
+
+        mockMvc.perform(delete("/api/payments/{paymentId}", paymentId))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
     public void testGetPaymentsByDateRange_InvalidDateRange() throws Exception {    
         String invalidStartDate = "2024-13-32T00:00:00";  // Invalid date
         String invalidEndDate = "2024-13-32T23:59:59";  // Invalid date
@@ -157,31 +204,31 @@ public class PaymentControllerTest {
             .param("endDate", invalidEndDate))
             .andExpect(status().isBadRequest());
     }
+
     @Test
     public void testGetPaymentsByUserId_UserNotFound() throws Exception {
-    UUID userId = UUID.randomUUID();  // UserID that doesn't exist
-    when(paymentService.getAllPaymentsByUserId(userId)).thenReturn(List.of());
+        UUID userId = UUID.randomUUID();  // UserID that doesn't exist
+        when(paymentService.getAllPaymentsByUserId(userId)).thenReturn(List.of());
 
-    mockMvc.perform(get("/api/payments/user/{userId}", userId))
-            .andExpect(status().isNoContent());
-}
-@Test
-public void testCalculateTotalAmountByStatus_NoPaymentsForStatus() throws Exception {
-    when(paymentService.calculateTotalAmountByStatus("COMPLETED")).thenReturn(BigDecimal.ZERO);
+        mockMvc.perform(get("/api/payments/user/{userId}", userId))
+                .andExpect(status().isNoContent());
+    }
 
-    mockMvc.perform(get("/api/payments/total-amount/status/{status}", "COMPLETED"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$").value(0.00));
-}
-@Test
-public void testCalculateTotalAmount_EmptyPayments() throws Exception {
-    when(paymentService.calculateTotalAmount()).thenReturn(BigDecimal.ZERO);
+    @Test
+    public void testCalculateTotalAmountByStatus_NoPaymentsForStatus() throws Exception {
+        when(paymentService.calculateTotalAmountByStatus("COMPLETED")).thenReturn(BigDecimal.ZERO);
 
-    mockMvc.perform(get("/api/payments/total-amount"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$").value(0.00));
-}
+        mockMvc.perform(get("/api/payments/total-amount/status/{status}", "COMPLETED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(0.00));
+    }
 
+    @Test
+    public void testCalculateTotalAmount_EmptyPayments() throws Exception {
+        when(paymentService.calculateTotalAmount()).thenReturn(BigDecimal.ZERO);
 
-
+        mockMvc.perform(get("/api/payments/total-amount"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(0.00));
+    }
 }
