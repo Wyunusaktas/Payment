@@ -26,16 +26,16 @@ spring:
       name: devuser
       password: devpassword
 
-microservices:
-  user: http://192.168.137.195:8007
-  order: http://192.168.137.169:8003
-  gateway: http://192.168.137.149:8001
-  payment: http://192.168.137.52:8006
-  product: http://localhost:8002
-  invoice: http://192.168.137.140:8008
-  notification: http://192.168.137.111:8004
-  cart: http://192.168.137.244:8005
-  shipping: http://192.168.137.179:8011
+  microservices:
+    user: http://192.168.137.195:8007
+    order: http://192.168.137.169:8003
+    gateway: http://192.168.137.149:8001
+    payment: http://192.168.137.52:8006
+    product: http://localhost:8002
+    invoice: http://192.168.137.140:8008
+    notification: http://192.168.137.111:8004
+    cart: http://192.168.137.244:8005
+    shipping: http://192.168.137.179:8011
 
 server:
   port: 8006
@@ -43,3 +43,6 @@ server:
 springdoc:
   api-docs:
     path: /api-docs
+
+secret:
+  key: ilerijava 

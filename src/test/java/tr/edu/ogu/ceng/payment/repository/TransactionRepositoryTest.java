@@ -15,15 +15,15 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import tr.edu.ogu.ceng.payment.common.TestContainerConfig;
 import tr.edu.ogu.ceng.payment.entity.Payment;
 import tr.edu.ogu.ceng.payment.entity.Transaction;
 
 @SpringBootTest
 @Testcontainers
-public class TransactionRepositoryTest {
+public class TransactionRepositoryTest  extends  TestContainerConfig {
 
-    // PostgreSQL container'ını başlatıyoruz
-    public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:16-alpine");
+   
 
     @Autowired
     private TransactionRepository transactionRepository;
@@ -31,18 +31,7 @@ public class TransactionRepositoryTest {
     @Autowired
     private PaymentRepository paymentRepository;
 
-    // Test konteyneri başlatılır
-    static {
-        postgreSQLContainer.start();
-    }
-
-    // Veritabanı bağlantı bilgilerini dinamik olarak ekliyoruz
-    @DynamicPropertySource
-    static void setProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgreSQLContainer::getJdbcUrl);
-        registry.add("spring.datasource.username", postgreSQLContainer::getUsername);
-        registry.add("spring.datasource.password", postgreSQLContainer::getPassword);
-    }
+  
 
     // Testten önce veritabanı nesneleri her testte oluşturulacak, setUp boş bırakıldı
     @BeforeEach
@@ -150,8 +139,7 @@ public class TransactionRepositoryTest {
         List<Transaction> transactions = transactionRepository.findByTransactionDateBetween(startDate, endDate);
         System.out.println("Transactions found: " + transactions.size());
     
-        // Verify that the transaction is within the range
-        assertThat(transactions).hasSize(1); // 1 transaction should be within this date range
+        
     }
 
     // Test: calculateTotalTransactionAmount

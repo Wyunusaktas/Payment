@@ -13,12 +13,12 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
+import tr.edu.ogu.ceng.payment.common.TestContainerConfig;
 import tr.edu.ogu.ceng.payment.entity.PaymentMethod;
 
 @SpringBootTest
-public class PaymentMethodRepositoryTest {
+public class PaymentMethodRepositoryTest extends  TestContainerConfig {
 
-    public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:16-alpine");
 
     @Autowired
     private PaymentMethodRepository paymentMethodRepository;
@@ -26,17 +26,7 @@ public class PaymentMethodRepositoryTest {
     @Autowired
     private PaymentRepository paymentRepository;
 
-    static {
-        postgreSQLContainer.start();
-    }
-
-    @DynamicPropertySource
-    static void setProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgreSQLContainer::getJdbcUrl);
-        registry.add("spring.datasource.username", postgreSQLContainer::getUsername);
-        registry.add("spring.datasource.password", postgreSQLContainer::getPassword);
-    }
-
+ 
     @BeforeEach
     public void setUp() {
         paymentMethodRepository.deleteAll();

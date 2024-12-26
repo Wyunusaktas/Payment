@@ -104,7 +104,7 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webflux</artifactId>
-            <version>5.3.31</version> <!-- Kullandığınız Spring sürümüne uygun bir sürüm -->
+            <version>5.3.31</version> 
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -121,6 +121,12 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>4.0.1</version> 
+            <scope>provided</scope>
         </dependency>
         
 

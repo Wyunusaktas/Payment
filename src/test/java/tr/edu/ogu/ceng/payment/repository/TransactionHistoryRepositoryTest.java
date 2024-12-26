@@ -15,33 +15,21 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import tr.edu.ogu.ceng.payment.common.TestContainerConfig;
 import tr.edu.ogu.ceng.payment.entity.Payment;
 import tr.edu.ogu.ceng.payment.entity.TransactionHistory;
 
 @SpringBootTest
 @Testcontainers
-public class TransactionHistoryRepositoryTest {
+public class TransactionHistoryRepositoryTest  extends  TestContainerConfig {
 
-    // PostgreSQL container for testing
-    public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:16-alpine");
-
+   
     @Autowired
     private TransactionHistoryRepository transactionHistoryRepository;
 
     @Autowired
     private PaymentRepository paymentRepository;
 
-    // Start the container and set properties dynamically
-    static {
-        postgreSQLContainer.start();
-    }
-
-    @DynamicPropertySource
-    static void setProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgreSQLContainer::getJdbcUrl);
-        registry.add("spring.datasource.username", postgreSQLContainer::getUsername);
-        registry.add("spring.datasource.password", postgreSQLContainer::getPassword);
-    }
 
     @BeforeEach
     public void setUp() {

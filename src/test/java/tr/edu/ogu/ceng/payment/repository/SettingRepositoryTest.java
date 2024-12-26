@@ -12,29 +12,17 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
+import tr.edu.ogu.ceng.payment.common.TestContainerConfig;
 import tr.edu.ogu.ceng.payment.entity.Setting;
 
 @SpringBootTest
-public class SettingRepositoryTest {
+public class SettingRepositoryTest  extends  TestContainerConfig {
 
-    // Testcontainers PostgreSQL container setup
-    public static PostgreSQLContainer<?> postgreSQLContainer = new PostgreSQLContainer<>("postgres:16-alpine");
 
     @Autowired
     private SettingRepository settingRepository;
 
-    static {
-        // Start PostgreSQL container
-        postgreSQLContainer.start();
-    }
-
-    @DynamicPropertySource
-    static void setProperties(DynamicPropertyRegistry registry) {
-        // Set properties for Spring to connect to the containerized PostgreSQL instance
-        registry.add("spring.datasource.url", postgreSQLContainer::getJdbcUrl);
-        registry.add("spring.datasource.username", postgreSQLContainer::getUsername);
-        registry.add("spring.datasource.password", postgreSQLContainer::getPassword);
-    }
+    
 
     @BeforeEach
     public void setUp() {
